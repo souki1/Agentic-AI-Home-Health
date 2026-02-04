@@ -1,4 +1,37 @@
-# React + TypeScript + Vite
+# Health App (React + TypeScript + Vite)
+
+Frontend for the Health Analytics app.
+
+## Deploy to GCP (Docker)
+
+The image listens on port **8080** (Cloud Run default).
+
+```bash
+# Build (from health-app/)
+docker build -t health-app-frontend .
+
+# Run locally
+docker run -p 8080:8080 health-app-frontend
+# Open http://localhost:8080
+```
+
+**Cloud Run:**
+
+```bash
+# Build and push to Artifact Registry (set your project and region)
+gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/health-app .
+
+# Deploy
+gcloud run deploy health-app --image gcr.io/YOUR_PROJECT_ID/health-app --platform managed --region us-central1 --allow-unauthenticated
+```
+
+**API URL:** Set `VITE_API_URL` at build time if the backend is on a different origin:
+
+```bash
+docker build --build-arg VITE_API_URL=https://your-backend.run.app -t health-app-frontend .
+```
+
+---
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

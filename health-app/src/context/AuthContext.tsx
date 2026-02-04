@@ -8,7 +8,10 @@ function loadAuth(): AuthState | null {
   try {
     const raw = localStorage.getItem(AUTH_STORAGE_KEY);
     if (raw) {
-      return JSON.parse(raw) as AuthState;
+      const parsed = JSON.parse(raw) as AuthState;
+      if (!parsed?.user) return null;
+      const role = parsed.user.role?.toLowerCase() === "admin" ? "admin" : "patient";
+      return { ...parsed, user: { ...parsed.user, role } };
     }
   } catch {
     // ignore corrupted storage
@@ -34,7 +37,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [auth, setAuth] = useState<AuthState | null>(loadAuth);
 
   const login = useCallback((response: AuthResponse) => {
-    const next: AuthState = { token: response.token, user: response.user };
+    const role = response.user.role?.toLowerCase() === "admin" ? "admin" : "patient";
+    const user = { ...response.user, role };
+    const next: AuthState = { token: response.token, user };
     setAuth(next);
     saveAuth(next);
   }, []);

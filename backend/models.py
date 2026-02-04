@@ -54,3 +54,18 @@ class CheckIn(Base):
     notes = Column(Text, nullable=True)
 
     patient = relationship("User", back_populates="check_ins", foreign_keys=[patient_id])
+
+
+class RAGChunk(Base):
+    """RAG chunks: store chunk text and metadata for lookup after Vector Search."""
+    __tablename__ = "rag_chunks"
+
+    id = Column(String(255), primary_key=True)  # chunk_id from chunking
+    text = Column(Text, nullable=False)
+    source = Column(String(255), nullable=True)  # document source/URI
+    chunk_metadata = Column("metadata", JSONB, nullable=True)  # chunk_index, etc. (DB column name is "metadata")
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+
+    __table_args__ = (
+        {"comment": "RAG chunks for lookup after Vector Search retrieval"},
+    )

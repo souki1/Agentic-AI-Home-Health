@@ -65,12 +65,12 @@ export function AdminPatientsPage() {
               {
                 key: "name",
                 header: "Patient Name",
-                render: (r) => r.patient.name,
+                render: (r) => r.patient.name || "—",
               },
               {
                 key: "condition",
                 header: "Condition",
-                render: (r) => r.patient.condition,
+                render: (r) => r.patient.condition || "—",
               },
               {
                 key: "last",

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useDashboardData } from "../hooks";
-import { addDays, toISODate } from "../utils";
+import { addDays, toISODate, formatDate } from "../utils";
 import { AppLayout } from "../components/layout";
 import { KpiCard, LineChartCard, DataTable, StatusBadge, QueryState } from "../components";
 
@@ -59,16 +59,35 @@ export function AdminDashboardPage() {
     }));
   }, [last30, today]);
 
+  // One row per patient: their latest check-in. Sort so Needs Follow-up / Escalated first, then by risk desc.
   const needsFollowUp = useMemo(() => {
     const byPatient = new Map<string, (typeof checkIns)[0]>();
     checkIns.forEach((c) => {
       const cur = byPatient.get(c.patient_id);
       if (!cur || c.date > cur.date) byPatient.set(c.patient_id, c);
     });
-    return Array.from(byPatient.values())
-      .filter((c) => c.status !== "Normal")
-      .sort((a, b) => b.risk_score - a.risk_score);
+    const list = Array.from(byPatient.values());
+    const statusOrder = (s: string) => (s === "Escalated" ? 0 : s === "Needs Follow-up" ? 1 : 2);
+    return list.sort((a, b) => {
+      const orderA = statusOrder(a.status);
+      const orderB = statusOrder(b.status);
+      if (orderA !== orderB) return orderA - orderB;
+      return b.risk_score - a.risk_score;
+    });
   }, [checkIns]);
+
+  // If no check-ins yet, show one row per patient with placeholder so table isn’t empty
+  const tableRows = useMemo(() => {
+    if (needsFollowUp.length > 0) return needsFollowUp;
+    return patients.map((p) => ({
+      id: p.id,
+      patient_id: p.id,
+      date: "",
+      risk_score: 0,
+      status: "Normal" as const,
+      symptom_score: 0,
+    })) as (typeof checkIns)[0][];
+  }, [needsFollowUp, patients]);
 
   const getPatientName = (id: string) => patients.find((p) => p.id === id)?.name ?? id;
   const getPatientCondition = (id: string) =>
@@ -106,12 +125,15 @@ export function AdminDashboardPage() {
             />
           </div>
           <div>
-            <h2 className="mb-3 text-lg font-semibold text-slate-800">
+            <h2 className="mb-1 text-lg font-semibold text-slate-800">
               Needs Follow-up
             </h2>
+            <p className="mb-3 text-sm text-slate-500">
+              Patients needing follow-up appear first. All patients with a check-in are listed.
+            </p>
             <DataTable
               keyField="id"
-              data={needsFollowUp}
+              data={tableRows}
               columns={[
                 {
                   key: "patient",
@@ -123,11 +145,16 @@ export function AdminDashboardPage() {
                   header: "Condition",
                   render: (r) => getPatientCondition(r.patient_id),
                 },
-                { key: "date", header: "Last Check-in", render: (r) => r.date },
+                {
+                  key: "date",
+                  header: "Last Check-in",
+                  render: (r) => (r.date ? formatDate(r.date) : "—"),
+                },
                 {
                   key: "risk_score",
                   header: "Risk Score",
-                  render: (r) => r.risk_score.toFixed(1),
+                  render: (r) =>
+                    r.risk_score != null ? r.risk_score.toFixed(1) : "—",
                 },
                 {
                   key: "status",
@@ -148,6 +175,7 @@ export function AdminDashboardPage() {
                   ),
                 },
               ]}
+              emptyMessage="No patients yet. When patients sign up and submit check-ins, they will appear here."
             />
           </div>
         </div>

@@ -80,6 +80,35 @@ class CheckInCreate(BaseModel):
     notes: Optional[str] = None
 
 
+# ----- RAG -----
+class RAGQueryRequest(BaseModel):
+    question: str
+    top_k: Optional[int] = None
+
+
+class RAGSource(BaseModel):
+    chunk_id: str
+    text: str
+
+
+class RAGQueryResponse(BaseModel):
+    answer: str
+    sources: list[RAGSource] = []
+
+
+class RAGDocumentIngest(BaseModel):
+    text: str
+    source: str  # e.g. "health_guidelines", "patient_record_123", etc.
+    title: Optional[str] = None
+
+
+class RAGIngestResponse(BaseModel):
+    chunks_created: int
+    chunk_ids: list[str]
+    message: str
+
+
+# ----- Check-in -----
 class CheckInWithScores(BaseModel):
     id: str
     patient_id: str

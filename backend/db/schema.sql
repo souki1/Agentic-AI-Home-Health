@@ -41,3 +41,14 @@ CREATE TABLE IF NOT EXISTS check_ins (
 
 CREATE INDEX IF NOT EXISTS ix_check_ins_patient_id ON check_ins (patient_id);
 CREATE INDEX IF NOT EXISTS ix_check_ins_date ON check_ins (date);
+
+-- RAG chunks: store chunk text and metadata for lookup after Vector Search retrieval
+CREATE TABLE IF NOT EXISTS rag_chunks (
+    id VARCHAR(255) PRIMARY KEY,
+    text TEXT NOT NULL,
+    source VARCHAR(255),
+    metadata JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ix_rag_chunks_source ON rag_chunks (source);

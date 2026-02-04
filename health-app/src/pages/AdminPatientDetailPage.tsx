@@ -65,11 +65,11 @@ export function AdminPatientDetailPage() {
               <h2 className="text-lg font-semibold text-slate-800">Profile</h2>
               <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
                 <dt className="text-slate-500">Name</dt>
-                <dd className="font-medium text-slate-800">{patient.name}</dd>
+                <dd className="font-medium text-slate-800">{patient.name || "—"}</dd>
                 <dt className="text-slate-500">Age</dt>
-                <dd className="font-medium text-slate-800">{patient.age}</dd>
+                <dd className="font-medium text-slate-800">{patient.age ?? "—"}</dd>
                 <dt className="text-slate-500">Condition</dt>
-                <dd className="font-medium text-slate-800">{patient.condition}</dd>
+                <dd className="font-medium text-slate-800">{patient.condition || "—"}</dd>
                 <dt className="text-slate-500">Created</dt>
                 <dd className="font-medium text-slate-800">
                   {formatDate(patient.created_at)}
