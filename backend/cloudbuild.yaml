@@ -16,7 +16,8 @@ substitutions:
   _SERVICE_NAME: backend
   _IMAGE_TAG: latest
   _CORS_ORIGINS: "https://agentic-ai-home-health-79306395653.europe-west1.run.app,http://localhost:5173"
-  _CLOUDSQL_INSTANCE: ""
+  # Cloud SQL instance (PROJECT:REGION:INSTANCE)
+  _CLOUDSQL_INSTANCE: "tech-83b89:us-central1:healtappdb"
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -65,16 +66,17 @@ steps:
       - managed
       - --allow-unauthenticated
       - --set-secrets
-      - DATABASE_URL=DATABASE_URL_SECRET:latest,SECRET_KEY=SECRET_KEY_SECRET:latest
+      - DATABASE_URL=DATABASE_URL_SECRET:latest,SECRET_KEY=SECRET_KEY_SECRET:latest,DB_PASS=DB_PASS_SECRET:latest
       - --set-env-vars
-      - CORS_ORIGINS=${_CORS_ORIGINS}
+      - CORS_ORIGINS=${_CORS_ORIGINS},INSTANCE_CONNECTION_NAME=${_CLOUDSQL_INSTANCE},DB_USER=health_user,DB_NAME=health_analytics
+      - --add-cloudsql-instances
+      - ${_CLOUDSQL_INSTANCE}
     waitFor: [push]
-    # Optional: add --add-cloudsql-instances PROJECT:REGION:INSTANCE if using Cloud SQL
+    # Cloud SQL: create DB_PASS_SECRET with DB user password. Create DB and user in instance healtappdb, then run schema (see backend/docs/GCP-DATABASE-CONNECT.md).
     # Note: Create secrets in Secret Manager:
-    #   gcloud secrets create DATABASE_URL_SECRET --data-file=- < .env (paste DATABASE_URL value)
-    #   gcloud secrets create SECRET_KEY_SECRET --data-file=- < .env (paste SECRET_KEY value)
-    # Set _CORS_ORIGINS to frontend Cloud Run URL(s), comma-separated
-    # Set _CLOUDSQL_INSTANCE to PROJECT_ID:REGION:INSTANCE_NAME (or empty if using external DB)
+    #   echo -n "postgresql://..." | gcloud secrets create DATABASE_URL_SECRET --data-file=-
+    #   echo -n "jwt-secret" | gcloud secrets create SECRET_KEY_SECRET --data-file=-
+    #   echo -n "db-user-password" | gcloud secrets create DB_PASS_SECRET --data-file=-
 
 images:
   - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/${_SERVICE_NAME}:${_IMAGE_TAG}
