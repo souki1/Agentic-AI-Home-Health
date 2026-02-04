@@ -1,0 +1,82 @@
+# Backend CI/CD: build and deploy to Google Cloud Run
+# Uses OIDC to authenticate to GCP (no long-lived keys in secrets).
+#
+# Set in repo: Settings → Secrets and variables → Actions
+#   Variables: GCP_PROJECT_ID, GCP_REGION (e.g. us-central1)
+#   Secrets: DATABASE_URL, SECRET_KEY (and other backend env vars)
+#   For OIDC: GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
+#   Or Secret: GOOGLE_APPLICATION_CREDENTIALS_JSON (base64 service account key)
+
+name: Backend - Build and Deploy
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-deploy.yml'
+  workflow_dispatch:
+
+env:
+  SERVICE_NAME: health-backend
+  GCP_REGION: us-central1
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+        # Or with key: credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION || env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build Docker image
+        working-directory: backend
+        env:
+          REGISTRY: ${{ vars.GCP_REGION || env.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/cloud-run-source-deploy
+        run: |
+          docker build \
+            -t ${{ env.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            -t ${{ env.REGISTRY }}/${{ env.SERVICE_NAME }}:latest \
+            .
+
+      - name: Push to Artifact Registry
+        env:
+          REGISTRY: ${{ vars.GCP_REGION || env.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/cloud-run-source-deploy
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.SERVICE_NAME }}:latest
+
+      - name: Deploy to Cloud Run
+        env:
+          REGION: ${{ vars.GCP_REGION || env.GCP_REGION }}
+          REGISTRY: ${{ vars.GCP_REGION || env.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/cloud-run-source-deploy
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image ${{ env.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            --set-env-vars SECRET_KEY="${{ secrets.SECRET_KEY }}" \
+            --set-env-vars GOOGLE_CLOUD_PROJECT="${{ vars.GOOGLE_CLOUD_PROJECT }}" \
+            --set-env-vars VECTOR_SEARCH_INDEX_ENDPOINT_ID="${{ vars.VECTOR_SEARCH_INDEX_ENDPOINT_ID }}" \
+            --set-env-vars GOOGLE_CLOUD_LOCATION="${{ vars.GOOGLE_CLOUD_LOCATION || 'us-central1' }}"
+        # Note: For production, use Secret Manager instead:
+        # --set-secrets DATABASE_URL=DATABASE_URL_SECRET:latest,SECRET_KEY=SECRET_KEY_SECRET:latest
