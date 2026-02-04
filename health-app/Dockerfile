@@ -30,6 +30,10 @@ RUN rm -rf /etc/nginx/conf.d /usr/share/nginx/html
 # Copy nginx config (listens on 8080, SPA fallback)
 COPY nginx.conf /etc/nginx/nginx.conf
 
+# Copy entrypoint script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 # Copy built assets from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
 
@@ -37,4 +41,4 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/log/nginx
 # USER nginx
 
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
