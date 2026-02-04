@@ -4,7 +4,7 @@ Frontend for the Health Analytics app.
 
 ## Deploy to GCP (Docker)
 
-The image listens on port **8080** (Cloud Run default).
+The image uses **Node + serve** (no nginx) and listens on port **8080** (Cloud Run default).
 
 ```bash
 # Build (from health-app/)

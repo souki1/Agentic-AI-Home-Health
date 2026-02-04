@@ -1,5 +1,5 @@
 # Health App Frontend - Docker image for GCP (Cloud Run, GKE, etc.)
-# Multi-stage: build with Node, serve with nginx on PORT 8080
+# Multi-stage: build with Node, serve with Node + serve (no nginx)
 
 # ---- Build ----
 FROM node:22-alpine AS builder
@@ -10,35 +10,27 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Build args for API URL (optional; default /api for same-origin proxy)
+# Build args for API URL (set to backend URL for Cloud Run)
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=${VITE_API_URL}
 
 COPY . .
 RUN npm run build
 
-# ---- Production ----
-FROM nginx:1.27-alpine AS production
+# ---- Production (Node + serve) ----
+FROM node:22-alpine AS production
 
-# Cloud Run uses PORT env (default 8080); nginx will listen on 8080
+WORKDIR /app
+
+# Only need serve to host static files (smaller image)
+RUN npm install -g serve
+
+# Copy built app from builder
+COPY --from=builder /app/dist ./dist
+
+# Cloud Run uses PORT env (default 8080)
 ENV PORT=8080
 EXPOSE 8080
 
-# Replace default config with our custom one
-RUN rm -rf /etc/nginx/conf.d /usr/share/nginx/html
-
-# Copy nginx config (listens on 8080, SPA fallback)
-COPY nginx.conf /etc/nginx/nginx.conf
-
-# Copy entrypoint script
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
-
-# Copy built assets from builder
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Optional: run as non-root (Cloud Run often runs as root; uncomment if your runtime needs it)
-# RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/log/nginx
-# USER nginx
-
-ENTRYPOINT ["/docker-entrypoint.sh"]
+# serve: -s = SPA fallback (all routes -> index.html), -l = port
+CMD ["sh", "-c", "serve dist -s -l ${PORT:-8080}"]
