@@ -25,28 +25,31 @@ gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/health-app .
 gcloud run deploy health-app --image gcr.io/YOUR_PROJECT_ID/health-app --platform managed --region us-central1 --allow-unauthenticated
 ```
 
-**API URL:** Two options:
+**API URL Configuration:**
 
-**Option 1: Direct API calls (recommended for Cloud Run)**
-Build with the backend URL so the frontend makes direct calls:
+**For GCP Cloud Run (recommended):**
+Build with the backend Cloud Run URL so the frontend makes direct calls:
 ```bash
-docker build --build-arg VITE_API_URL=https://your-backend.run.app -t health-app-frontend .
+# Get your backend URL first
+BACKEND_URL=$(gcloud run services describe health-backend --region us-central1 --format="value(status.url)")
+
+# Build with backend URL
+docker build --build-arg VITE_API_URL=$BACKEND_URL -t health-app-frontend .
+
+# Or in Cloud Build:
+gcloud builds submit --config=cloudbuild.yaml . \
+  --substitutions=_VITE_API_URL=$BACKEND_URL
 ```
 
-**Option 2: Nginx proxy (if using `/api` default)**
-Set `BACKEND_URL` env var when running:
+**For local development with proxy:**
+Use default `/api` and set `BACKEND_URL` when running:
 ```bash
 docker run -p 8080:8080 \
-  -e BACKEND_URL=https://your-backend.run.app \
+  -e BACKEND_URL=http://localhost:8000 \
   health-app-frontend
 ```
 
-For Cloud Run deployment, set `BACKEND_URL` in the service:
-```bash
-gcloud run deploy health-app \
-  --set-env-vars BACKEND_URL=https://your-backend.run.app \
-  ...
-```
+**Important**: For Cloud Run, always build with `VITE_API_URL` set to your backend URL. The nginx proxy is only for local development or same-domain setups.
 
 ---
 

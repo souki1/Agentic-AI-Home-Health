@@ -12,9 +12,11 @@
 #   _IMAGE_TAG       - Tag for image (default latest; use SHORT_SHA in trigger)
 
 substitutions:
-  _REGION: us-central1
-  _SERVICE_NAME: health-backend
+  _REGION: northamerica-northeast1
+  _SERVICE_NAME: backend
   _IMAGE_TAG: latest
+  _CORS_ORIGINS: "https://agentic-ai-home-health-79306395653.europe-west1.run.app,http://localhost:5173"
+  _CLOUDSQL_INSTANCE: ""
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -64,11 +66,15 @@ steps:
       - --allow-unauthenticated
       - --set-secrets
       - DATABASE_URL=DATABASE_URL_SECRET:latest,SECRET_KEY=SECRET_KEY_SECRET:latest
+      - --set-env-vars
+      - CORS_ORIGINS=${_CORS_ORIGINS}
     waitFor: [push]
+    # Optional: add --add-cloudsql-instances PROJECT:REGION:INSTANCE if using Cloud SQL
     # Note: Create secrets in Secret Manager:
     #   gcloud secrets create DATABASE_URL_SECRET --data-file=- < .env (paste DATABASE_URL value)
     #   gcloud secrets create SECRET_KEY_SECRET --data-file=- < .env (paste SECRET_KEY value)
-    # Or use --set-env-vars for non-sensitive config (not recommended for secrets)
+    # Set _CORS_ORIGINS to frontend Cloud Run URL(s), comma-separated
+    # Set _CLOUDSQL_INSTANCE to PROJECT_ID:REGION:INSTANCE_NAME (or empty if using external DB)
 
 images:
   - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/${_SERVICE_NAME}:${_IMAGE_TAG}

@@ -69,14 +69,22 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Health Analytics API", lifespan=lifespan)
 
 # CORS: with allow_credentials=True you must set explicit origins (not "*")
+# Parse CORS origins from env (comma-separated)
+cors_origins_str = getattr(settings, "cors_origins", "")
+cors_origins_list = [
+    origin.strip()
+    for origin in cors_origins_str.split(",")
+    if origin.strip()
+] if cors_origins_str else [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

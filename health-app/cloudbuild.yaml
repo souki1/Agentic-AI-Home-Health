@@ -10,17 +10,17 @@
 # Substitutions (set in trigger or default below):
 #   _REGION          - Cloud Run region (default us-central1)
 #   _SERVICE_NAME    - Cloud Run service name (default health-app)
-#   _VITE_API_URL    - Optional; API base URL at build time (default /api)
-#                      If set to full URL (e.g. https://backend.run.app), frontend makes direct calls
-#                      If /api, nginx proxies to BACKEND_URL env var
-#   _BACKEND_URL     - Backend URL for nginx proxy (if VITE_API_URL=/api)
+#   _VITE_API_URL    - Backend API URL at build time (REQUIRED for Cloud Run)
+#                      Set to your backend Cloud Run URL: https://health-backend-XXX.run.app
+#                      If /api, nginx proxies to BACKEND_URL env var (for local dev)
+#   _BACKEND_URL     - Backend URL for nginx proxy (only used if VITE_API_URL=/api)
 #   _IMAGE_TAG       - Tag for image (default latest; use SHORT_SHA in trigger)
 
 substitutions:
-  _REGION: us-central1
-  _SERVICE_NAME: health-app
-  _VITE_API_URL: /api
-  _BACKEND_URL: http://localhost:8000
+  _REGION: europe-west1
+  _SERVICE_NAME: agentic-ai-home-health
+  _VITE_API_URL: https://backend-79306395653.northamerica-northeast1.run.app
+  _BACKEND_URL: https://backend-79306395653.northamerica-northeast1.run.app
   _IMAGE_TAG: latest
 
 options:
