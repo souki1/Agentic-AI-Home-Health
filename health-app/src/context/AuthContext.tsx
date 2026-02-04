@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 
-import type { AuthResponse, AuthState } from "../types";
+import type { AuthResponse, AuthState, Role } from "../types";
 
 export const AUTH_STORAGE_KEY = "health_analytics_auth";
 
@@ -10,7 +10,7 @@ function loadAuth(): AuthState | null {
     if (raw) {
       const parsed = JSON.parse(raw) as AuthState;
       if (!parsed?.user) return null;
-      const role = parsed.user.role?.toLowerCase() === "admin" ? "admin" : "patient";
+      const role: Role = parsed.user.role?.toLowerCase() === "admin" ? "admin" : "patient";
       return { ...parsed, user: { ...parsed.user, role } };
     }
   } catch {
@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [auth, setAuth] = useState<AuthState | null>(loadAuth);
 
   const login = useCallback((response: AuthResponse) => {
-    const role = response.user.role?.toLowerCase() === "admin" ? "admin" : "patient";
+    const role: Role = response.user.role?.toLowerCase() === "admin" ? "admin" : "patient";
     const user = { ...response.user, role };
     const next: AuthState = { token: response.token, user };
     setAuth(next);
