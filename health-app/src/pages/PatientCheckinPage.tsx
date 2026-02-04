@@ -1,18 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { store } from '../mock/store';
+import { createCheckIn } from '../services/api';
 import { toISODate } from '../utils';
-import type { CheckIn, Appetite, Mobility } from '../types';
+import type { CheckIn, Appetite, Mobility, DeviceReadings } from '../types';
 import { AppLayout } from '../components/layout';
 import { FormSlider, Toggle, Toast } from '../components';
-
-const MOCK_PATIENT_ID = 'p1';
 
 export function PatientCheckinPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [toastVisible, setToastVisible] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const defaultDevices: DeviceReadings = {};
   const [form, setForm] = useState<Omit<CheckIn, 'id' | 'patient_id'>>({
     date: toISODate(new Date()),
     fatigue: 0,
@@ -23,17 +24,32 @@ export function PatientCheckinPage() {
     dizziness: 0,
     swelling: 0,
     anxiety: 0,
+    headache: 0,
+    chest_tightness: 0,
+    joint_stiffness: 0,
+    skin_issues: 0,
+    constipation: 0,
+    bloating: 0,
     sleep_hours: 7,
     meds_taken: true,
     appetite: 'Normal',
     mobility: 'Normal',
+    devices: defaultDevices,
     notes: '',
   });
 
-  const handleSave = () => {
-    store.addCheckIn({ ...form, patient_id: MOCK_PATIENT_ID });
-    setToastVisible(true);
-    setTimeout(() => navigate('/patient/history'), 800);
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await createCheckIn({ ...form, patient_id: user?.id ?? 'p1' });
+      setToastVisible(true);
+      setTimeout(() => navigate('/patient/history'), 800);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save check-in');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleReset = () => {
@@ -47,10 +63,17 @@ export function PatientCheckinPage() {
       dizziness: 0,
       swelling: 0,
       anxiety: 0,
+      headache: 0,
+      chest_tightness: 0,
+      joint_stiffness: 0,
+      skin_issues: 0,
+      constipation: 0,
+      bloating: 0,
       sleep_hours: 7,
       meds_taken: true,
       appetite: 'Normal',
       mobility: 'Normal',
+      devices: {},
       notes: '',
     });
   };
@@ -71,7 +94,7 @@ export function PatientCheckinPage() {
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-lg font-semibold text-slate-800">Symptoms (0–10)</h2>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="space-y-4">
                   <FormSlider label="Fatigue" value={form.fatigue} min={0} max={10} onChange={(v) => setForm((f) => ({ ...f, fatigue: v }))} />
                   <FormSlider label="Breathlessness" value={form.breathlessness} min={0} max={10} onChange={(v) => setForm((f) => ({ ...f, breathlessness: v }))} />
@@ -83,6 +106,81 @@ export function PatientCheckinPage() {
                   <FormSlider label="Dizziness" value={form.dizziness} min={0} max={10} onChange={(v) => setForm((f) => ({ ...f, dizziness: v }))} />
                   <FormSlider label="Swelling" value={form.swelling} min={0} max={10} onChange={(v) => setForm((f) => ({ ...f, swelling: v }))} />
                   <FormSlider label="Anxiety" value={form.anxiety} min={0} max={10} onChange={(v) => setForm((f) => ({ ...f, anxiety: v }))} />
+                </div>
+                <div className="space-y-4">
+                  <FormSlider label="Headache" value={form.headache} min={0} max={10} onChange={(v) => setForm((f) => ({ ...f, headache: v }))} />
+                  <FormSlider label="Chest tightness" value={form.chest_tightness} min={0} max={10} onChange={(v) => setForm((f) => ({ ...f, chest_tightness: v }))} />
+                  <FormSlider label="Joint stiffness" value={form.joint_stiffness} min={0} max={10} onChange={(v) => setForm((f) => ({ ...f, joint_stiffness: v }))} />
+                  <FormSlider label="Skin issues" value={form.skin_issues} min={0} max={10} onChange={(v) => setForm((f) => ({ ...f, skin_issues: v }))} />
+                  <FormSlider label="Constipation" value={form.constipation} min={0} max={10} onChange={(v) => setForm((f) => ({ ...f, constipation: v }))} />
+                  <FormSlider label="Bloating" value={form.bloating} min={0} max={10} onChange={(v) => setForm((f) => ({ ...f, bloating: v }))} />
+                </div>
+              </div>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-lg font-semibold text-slate-800">Devices (optional)</h2>
+              <p className="mb-4 text-sm text-slate-500">Enter readings from your home health devices if you have them.</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">SpO2 (%)</label>
+                  <input
+                    type="number"
+                    min={70}
+                    max={100}
+                    placeholder="e.g. 97"
+                    value={form.devices?.spo2 ?? ''}
+                    onChange={(e) => setForm((f) => ({ ...f, devices: { ...f.devices, spo2: e.target.value ? Number(e.target.value) : undefined } }))}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Blood pressure (systolic / diastolic)</label>
+                  <div className="mt-1 flex gap-2">
+                    <input
+                      type="number"
+                      min={70}
+                      max={200}
+                      placeholder="120"
+                      value={form.devices?.bp_systolic ?? ''}
+                      onChange={(e) => setForm((f) => ({ ...f, devices: { ...f.devices, bp_systolic: e.target.value ? Number(e.target.value) : undefined } }))}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    />
+                    <span className="flex items-center text-slate-400">/</span>
+                    <input
+                      type="number"
+                      min={40}
+                      max={130}
+                      placeholder="80"
+                      value={form.devices?.bp_diastolic ?? ''}
+                      onChange={(e) => setForm((f) => ({ ...f, devices: { ...f.devices, bp_diastolic: e.target.value ? Number(e.target.value) : undefined } }))}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Weight (kg)</label>
+                  <input
+                    type="number"
+                    min={20}
+                    max={300}
+                    step={0.1}
+                    placeholder="e.g. 72"
+                    value={form.devices?.weight_kg ?? ''}
+                    onChange={(e) => setForm((f) => ({ ...f, devices: { ...f.devices, weight_kg: e.target.value ? Number(e.target.value) : undefined } }))}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Blood glucose (mg/dL)</label>
+                  <input
+                    type="number"
+                    min={40}
+                    max={400}
+                    placeholder="e.g. 100"
+                    value={form.devices?.glucose_mgdl ?? ''}
+                    onChange={(e) => setForm((f) => ({ ...f, devices: { ...f.devices, glucose_mgdl: e.target.value ? Number(e.target.value) : undefined } }))}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  />
                 </div>
               </div>
             </div>
@@ -135,13 +233,15 @@ export function PatientCheckinPage() {
                 placeholder="Any additional notes..."
               />
             </div>
+            {error && <p className="text-sm text-red-600">{error}</p>}
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={handleSave}
-                className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+                disabled={saving}
+                className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
               >
-                Save Check-in
+                {saving ? 'Saving...' : 'Save Check-in'}
               </button>
               <button
                 type="button"

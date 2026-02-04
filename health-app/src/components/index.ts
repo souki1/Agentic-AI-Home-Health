@@ -8,3 +8,4 @@ export { FormSlider } from './FormSlider';
 export { Toggle } from './Toggle';
 export { DateRangeFilter } from './DateRangeFilter';
 export { Toast } from './Toast';
+export { QueryState } from './QueryState';

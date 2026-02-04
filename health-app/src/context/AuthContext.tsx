@@ -1,52 +1,55 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import type { AuthUser, Role } from '../types';
+import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 
-const AUTH_KEY = 'health_analytics_auth';
+import type { AuthResponse, AuthState } from "../types";
 
-function loadAuth(): AuthUser | null {
+export const AUTH_STORAGE_KEY = "health_analytics_auth";
+
+function loadAuth(): AuthState | null {
   try {
-    const raw = localStorage.getItem(AUTH_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch (_) {}
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (raw) {
+      return JSON.parse(raw) as AuthState;
+    }
+  } catch {
+    // ignore corrupted storage
+  }
   return null;
 }
 
-function saveAuth(user: AuthUser | null) {
-  if (user) localStorage.setItem(AUTH_KEY, JSON.stringify(user));
-  else localStorage.removeItem(AUTH_KEY);
+function saveAuth(auth: AuthState | null) {
+  if (auth) localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+  else localStorage.removeItem(AUTH_STORAGE_KEY);
 }
 
 interface AuthContextValue {
-  user: AuthUser | null;
-  login: (email: string, role: Role) => void;
+  auth: AuthState | null;
+  user: AuthState["user"] | null;
+  login: (response: AuthResponse) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(loadAuth);
+  const [auth, setAuth] = useState<AuthState | null>(loadAuth);
 
-  const login = useCallback((email: string, role: Role) => {
-    const u = { email, role };
-    setUser(u);
-    saveAuth(u);
+  const login = useCallback((response: AuthResponse) => {
+    const next: AuthState = { token: response.token, user: response.user };
+    setAuth(next);
+    saveAuth(next);
   }, []);
 
   const logout = useCallback(() => {
-    setUser(null);
+    setAuth(null);
     saveAuth(null);
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ user, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const user = auth?.user ?? null;
+  return <AuthContext.Provider value={{ auth, user, login, logout }}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }

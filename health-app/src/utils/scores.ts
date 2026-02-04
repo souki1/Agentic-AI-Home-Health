@@ -1,7 +1,10 @@
 import type { CheckIn, Status } from '../types';
 
 /** symptom_score = average of all symptom fields (0–10) */
-const SYMPTOM_KEYS = ['fatigue', 'breathlessness', 'cough', 'pain', 'nausea', 'dizziness', 'swelling', 'anxiety'] as const;
+const SYMPTOM_KEYS = [
+  'fatigue', 'breathlessness', 'cough', 'pain', 'nausea', 'dizziness', 'swelling', 'anxiety',
+  'headache', 'chest_tightness', 'joint_stiffness', 'skin_issues', 'constipation', 'bloating',
+] as const;
 
 export function computeSymptomScore(c: CheckIn): number {
   const count = SYMPTOM_KEYS.length;
