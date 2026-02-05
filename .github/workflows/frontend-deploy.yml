@@ -21,7 +21,9 @@ on:
 env:
   SERVICE_NAME: health-app
   GCP_REGION: us-central1
-  # Repo variables: GCP_PROJECT_ID, GCP_REGION (optional override), VITE_API_URL (optional)
+  # Production backend API URL (defaults to value from .env.production if not set)
+  VITE_API_URL: https://backend-79306395653.northamerica-northeast1.run.app
+  # Repo variables: GCP_PROJECT_ID, GCP_REGION (optional override), VITE_API_URL (optional override)
 
 jobs:
   build-and-deploy:
@@ -55,7 +57,7 @@ jobs:
         working-directory: health-app
         run: |
           docker build \
-            --build-arg VITE_API_URL=${{ env.VITE_API_URL || '/api' }} \
+            --build-arg VITE_API_URL=${{ vars.VITE_API_URL || env.VITE_API_URL }} \
             -t ${{ vars.GCP_REGION || env.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}:${{ github.sha }} \
             -t ${{ vars.GCP_REGION || env.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}:latest \
             .

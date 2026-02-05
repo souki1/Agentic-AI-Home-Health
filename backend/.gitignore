@@ -1,4 +1,11 @@
+# Environment files
 .env
+.env.local
+
+# Production env can be committed (contains reference values, not secrets)
+# .env.production
+
+# Python
 __pycache__/
 *.pyc
 *.db

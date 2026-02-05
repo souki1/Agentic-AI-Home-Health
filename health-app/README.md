@@ -25,31 +25,44 @@ gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/health-app .
 gcloud run deploy health-app --image gcr.io/YOUR_PROJECT_ID/health-app --platform managed --region us-central1 --allow-unauthenticated
 ```
 
-**API URL Configuration:**
+## Environment Configuration
 
-**For GCP Cloud Run (recommended):**
-Build with the backend Cloud Run URL so the frontend makes direct calls:
+The app uses environment files for different deployment scenarios:
+
+### Local Development (`.env.local`)
+- Used when running `npm run dev`
+- Contains: `VITE_API_URL=http://localhost:8000`
+- This file is gitignored (local only)
+
+### Production (`.env.production`)
+- Used when running `npm run build` (production builds)
+- Contains: `VITE_API_URL=https://backend-79306395653.northamerica-northeast1.run.app`
+- This file is committed to git (public API URL)
+
+### Build Process
+
+**Local Development:**
 ```bash
-# Get your backend URL first
-BACKEND_URL=$(gcloud run services describe health-backend --region us-central1 --format="value(status.url)")
-
-# Build with backend URL
-docker build --build-arg VITE_API_URL=$BACKEND_URL -t health-app-frontend .
-
-# Or in Cloud Build:
-gcloud builds submit --config=cloudbuild.yaml . \
-  --substitutions=_VITE_API_URL=$BACKEND_URL
+npm run dev  # Uses .env.local
 ```
 
-**For local development with proxy:**
-Use default `/api` and set `BACKEND_URL` when running:
+**Production Build:**
 ```bash
-docker run -p 8080:8080 \
-  -e BACKEND_URL=http://localhost:8000 \
-  health-app-frontend
+npm run build  # Uses .env.production automatically
 ```
 
-**Important**: For Cloud Run, always build with `VITE_API_URL` set to your backend URL. The nginx proxy is only for local development or same-domain setups.
+**Docker Build:**
+The Dockerfile accepts `VITE_API_URL` as a build arg, which overrides `.env.production`:
+```bash
+docker build --build-arg VITE_API_URL=https://your-backend-url.run.app -t health-app-frontend .
+```
+
+**GitHub Actions / Cloud Build:**
+- GitHub Actions workflow uses the production URL from `.env.production` by default
+- Can be overridden via repository variables: `VITE_API_URL`
+- Cloud Build (`cloudbuild.yaml`) has the production URL configured in substitutions
+
+**Important**: When you push code and it builds automatically, it will use the production settings from `.env.production` file, ensuring the frontend connects to the production backend.
 
 ---
 

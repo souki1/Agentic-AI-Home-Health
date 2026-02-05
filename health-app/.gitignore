@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local environment files (contains local dev URLs, keep private)
+.env.local
+
+# Production env can be committed (contains public API URL)
+# .env.production

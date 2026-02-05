@@ -11,10 +11,12 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 # Build args for API URL (set to backend URL for Cloud Run)
-ARG VITE_API_URL=/api
+# If not provided, will use .env.production file
+ARG VITE_API_URL
 ENV VITE_API_URL=${VITE_API_URL}
 
 COPY . .
+# Build with production mode (uses .env.production if VITE_API_URL not set via build arg)
 RUN npm run build
 
 # ---- Production (Node + serve) ----

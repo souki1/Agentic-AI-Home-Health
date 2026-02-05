@@ -21,21 +21,46 @@ See **db/README.md** for more detail. Tables: `users`, `check_ins`.
 
 ## Backend setup
 
-1. Copy env and set your PostgreSQL URL:
+### Environment Configuration
 
-   ```bash
-   cd backend
-   copy .env.example .env
-   ```
+The backend uses environment files for different deployment scenarios:
 
-   Edit `.env` and set:
+**Local Development (`.env.local`):**
+- Used for local development
+- Contains: local PostgreSQL connection, local CORS origins
+- This file is gitignored (local only)
+- Copy from `.env.example` or create manually:
+  ```bash
+  cd backend
+  copy .env.example .env.local
+  ```
+  Edit `.env.local` and set your local PostgreSQL connection:
+  ```
+  DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/health_analytics
+  SECRET_KEY=your-local-secret-key
+  CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+  ```
 
-   ```
-   DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/health_analytics
-   SECRET_KEY=your-secret-key
-   ```
+**Production (`.env.production`):**
+- Reference file for production settings
+- **Note**: In Cloud Run, environment variables are set via Cloud Run env vars/secrets, not `.env` files
+- This file is committed to git as a reference/template
+- See `cloudbuild.yaml` and GitHub Actions workflow for actual production deployment configuration
 
-2. Install and run:
+**Fallback (`.env`):**
+- If `.env.local` doesn't exist, the app will try to load `.env`
+- You can copy `.env.example` to `.env` as a fallback
+
+### Configuration Priority
+
+The `config.py` loads environment files in this order:
+1. `.env.local` (if exists) - for local development
+2. `.env` (if exists) - fallback
+3. `.env.production` (if exists) - reference only
+
+For Cloud Run deployments, environment variables are set directly via Cloud Run (see `cloudbuild.yaml`).
+
+2. Install and run (from `backend/` directory):
 
    ```bash
    pip install -r requirements.txt
