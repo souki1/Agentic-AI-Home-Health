@@ -10,28 +10,17 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Build args for API URL (set to backend URL for Cloud Run)
-# If not provided, Vite will use .env.production
-ARG VITE_API_URL
+# Build arg: backend API URL (REQUIRED for production). Default matches this project's backend.
+ARG VITE_API_URL=https://backend-79306395653.northamerica-northeast1.run.app
+ENV VITE_API_URL=${VITE_API_URL}
 
-# Copy all files (including .env.production)
+# Copy all files (including .env.production as fallback)
 COPY . .
 
-# Verify VITE_API_URL is set (for debugging)
-RUN if [ -z "$VITE_API_URL" ]; then \
-      echo "⚠️ VITE_API_URL not set via build arg, will use .env.production"; \
-      cat .env.production 2>/dev/null || echo "⚠️ .env.production not found"; \
-    else \
-      echo "✅ Using VITE_API_URL from build arg: $VITE_API_URL"; \
-    fi
+RUN echo "✅ VITE_API_URL for build: $VITE_API_URL"
 
-# Build with production mode
-# Only inject VITE_API_URL if the build arg is non-empty
-RUN if [ -n "$VITE_API_URL" ]; then \
-      VITE_API_URL="$VITE_API_URL" npm run build; \
-    else \
-      npm run build; \
-    fi
+# Build with production mode (Vite inlines VITE_API_URL from env)
+RUN npm run build
 
 # ---- Production (Node + serve) ----
 FROM node:22-alpine AS production
