@@ -13,10 +13,24 @@ RUN npm ci
 # Build args for API URL (set to backend URL for Cloud Run)
 # If not provided, will use .env.production file
 ARG VITE_API_URL
+# Set env var for build - use build arg if provided, otherwise Vite will read from .env.production
+# Important: Only set ENV if ARG is provided (non-empty), otherwise let Vite read from .env.production
 ENV VITE_API_URL=${VITE_API_URL}
 
+# Copy all files (including .env.production)
 COPY . .
-# Build with production mode (uses .env.production if VITE_API_URL not set via build arg)
+
+# Verify VITE_API_URL is set (for debugging)
+RUN if [ -z "$VITE_API_URL" ]; then \
+      echo "⚠️ VITE_API_URL not set via build arg, will use .env.production"; \
+      cat .env.production 2>/dev/null || echo "⚠️ .env.production not found"; \
+    else \
+      echo "✅ Using VITE_API_URL from build arg: $VITE_API_URL"; \
+    fi
+
+# Build with production mode
+# Vite automatically uses .env.production when building in production mode
+# If VITE_API_URL env var is set (from build arg), it takes precedence
 RUN npm run build
 
 # ---- Production (Node + serve) ----

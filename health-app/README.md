@@ -64,6 +64,58 @@ docker build --build-arg VITE_API_URL=https://your-backend-url.run.app -t health
 
 **Important**: When you push code and it builds automatically, it will use the production settings from `.env.production` file, ensuring the frontend connects to the production backend.
 
+## Troubleshooting
+
+### "Got HTML instead of JSON" Error
+
+If you see this error: `Got HTML instead of JSON. Check API URL: /api/auth/login`
+
+**This means the frontend can't reach the backend.** Here's how to fix it:
+
+1. **Check if backend is running:**
+   ```bash
+   # In backend directory
+   python -m uvicorn main:app --reload --port 8000
+   # Or use the batch script:
+   run_server.bat
+   ```
+
+2. **Verify .env.local exists and has correct URL:**
+   ```bash
+   # Should show: VITE_API_URL=http://localhost:8000
+   cat .env.local
+   ```
+
+3. **Restart the dev server** (Vite needs restart to pick up .env changes):
+   ```bash
+   # Stop the dev server (Ctrl+C)
+   # Then restart:
+   npm run dev
+   ```
+
+4. **Check browser console** - you should see:
+   ```
+   [Config] VITE_API_URL: http://localhost:8000
+   [Config] API Base URL: http://localhost:8000
+   ```
+
+5. **If using `/api` proxy** (VITE_API_URL not set):
+   - This only works in development mode (`npm run dev`)
+   - Make sure backend is running on `http://localhost:8000`
+   - The proxy won't work in production builds
+
+6. **For production builds:**
+   - Always set `VITE_API_URL` in `.env.production` or build args
+   - `/api` proxy doesn't work in production - you need the full backend URL
+
+### Verify Backend Connection
+
+Test if backend is accessible:
+```bash
+# Should return: {"status":"ok","database":"connected"}
+curl http://localhost:8000/health
+```
+
 ---
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

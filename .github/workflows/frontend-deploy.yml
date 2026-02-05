@@ -19,8 +19,8 @@ on:
   workflow_dispatch:
 
 env:
-  SERVICE_NAME: health-app
-  GCP_REGION: us-central1
+  SERVICE_NAME: agentic-ai-home-health
+  GCP_REGION: europe-west1
   # Production backend API URL (defaults to value from .env.production if not set)
   VITE_API_URL: https://backend-79306395653.northamerica-northeast1.run.app
   # Repo variables: GCP_PROJECT_ID, GCP_REGION (optional override), VITE_API_URL (optional override)

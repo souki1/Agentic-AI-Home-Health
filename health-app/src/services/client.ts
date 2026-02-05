@@ -74,12 +74,21 @@ export async function request<T>(
     const text = await res.text();
     // If we got HTML, likely hitting wrong URL (frontend instead of backend)
     if (contentType.includes("text/html") || text.trim().startsWith("<!")) {
-      throw new ApiError(
-        `Got HTML instead of JSON. Check API URL: ${url}. ` +
-        `If using '/api', ensure backend URL is set at build time (VITE_API_URL). ` +
-        `Current API base: ${base}`,
-        res.status
-      );
+      let errorMsg = `Got HTML instead of JSON. Check API URL: ${url}\n`;
+      errorMsg += `Current API base: ${base}\n`;
+      
+      if (base === "/api") {
+        errorMsg += `\n⚠️ Using '/api' proxy. This only works in development mode (npm run dev).\n`;
+        errorMsg += `Solutions:\n`;
+        errorMsg += `1. For local dev: Ensure backend is running on http://localhost:8000\n`;
+        errorMsg += `2. For local dev: Set VITE_API_URL=http://localhost:8000 in .env.local\n`;
+        errorMsg += `3. For production: Set VITE_API_URL in .env.production or build args\n`;
+      } else {
+        errorMsg += `\n⚠️ Backend may not be running or URL is incorrect.\n`;
+        errorMsg += `Check: ${base}/health\n`;
+      }
+      
+      throw new ApiError(errorMsg, res.status);
     }
     throw new ApiError(
       `Expected JSON but got ${contentType || "unknown"}. Response: ${text.substring(0, 200)}`,
