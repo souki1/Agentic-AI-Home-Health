@@ -43,17 +43,20 @@ def _rag_configured() -> bool:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create DB tables on startup; optionally load RAG chunk store."""
-    try:
-        Base.metadata.create_all(bind=engine)
-        logger.info("Database tables ready.")
-    except OperationalError as e:
-        logger.warning(
-            "Could not connect to PostgreSQL. The API will start but DB endpoints will fail. "
-            "Check: 1) PostgreSQL is running  2) Database 'health_analytics' exists (createdb health_analytics)  "
-            "3) backend/.env has the correct DATABASE_URL (user and password). Error: %s",
-            str(e),
-        )
+    """Create DB tables on startup; optionally load RAG chunk store. Do not block listen."""
+    # Defer DB init so we bind to PORT first; run in thread to avoid blocking startup
+    import threading
+    def _init_db():
+        try:
+            Base.metadata.create_all(bind=engine)
+            logger.info("Database tables ready.")
+        except OperationalError as e:
+            logger.warning(
+                "Could not connect to PostgreSQL. The API will start but DB endpoints will fail. Error: %s",
+                str(e),
+            )
+    t = threading.Thread(target=_init_db, daemon=True)
+    t.start()
     # Load RAG chunk store from file if configured
     rag_path = getattr(settings, "rag_chunk_store_path", None)
     if rag_path:

@@ -52,7 +52,11 @@ database_url: str
 
 if settings.database_url:
     # Direct connection (TCP) - use when socket is unavailable or for local dev
-    database_url = settings.database_url
+    raw = settings.database_url.strip()
+    # Use psycopg2 driver explicitly so connect_timeout is applied
+    if raw.startswith("postgresql://") and not raw.startswith("postgresql+psycopg2"):
+        raw = "postgresql+psycopg2://" + raw.split("://", 1)[1]
+    database_url = raw
     logger.info("Using DATABASE_URL (direct TCP connection)")
 elif settings.instance_connection_name:
     # Cloud SQL connection via Unix socket (recommended for Cloud Run)
@@ -97,13 +101,17 @@ else:
         "Set either DATABASE_URL or INSTANCE_CONNECTION_NAME environment variable."
     )
 
-# Connection pool settings for Cloud Run
+# Connection pool settings for Cloud Run; short timeout so startup doesn't hang
+_connect_args = {}
+if "postgresql+psycopg2" in database_url or database_url.startswith("postgresql://"):
+    _connect_args["connect_timeout"] = 5
 engine = create_engine(
     database_url,
     pool_size=5,
     max_overflow=10,
-    pool_pre_ping=True,  # Verify connections before using
-    pool_recycle=3600,   # Recycle connections after 1 hour
+    pool_pre_ping=True,
+    pool_recycle=3600,
+    connect_args=_connect_args,
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
