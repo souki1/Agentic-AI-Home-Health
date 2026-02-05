@@ -9,8 +9,8 @@ database_url = settings.database_url
 if os.getenv("INSTANCE_CONNECTION_NAME"):
     # Cloud SQL connection via Unix socket
     db_user = os.getenv("DB_USER", "postgres")
-    db_pass = os.getenv("DB_PASS", "")
-    db_name = os.getenv("DB_NAME", "health_analytics")
+    db_pass = os.getenv("DB_PASS", "root")
+    db_name = os.getenv("DB_NAME", "healtappdb")
     instance_connection_name = os.getenv("INSTANCE_CONNECTION_NAME")
     # Format: postgresql+psycopg2://user:pass@/dbname?host=/cloudsql/instance
     database_url = f"postgresql+psycopg2://{db_user}:{db_pass}@/{db_name}?host=/cloudsql/{instance_connection_name}"
