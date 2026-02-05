@@ -1,0 +1,34 @@
+# Ignore files for gcloud builds submit (faster uploads)
+# Same syntax as .gitignore; paths relative to repo root
+
+.git
+.gitignore
+.gcloudignore
+
+# Frontend - exclude deps and build output
+health-app/node_modules
+health-app/dist
+health-app/.env
+health-app/.env.local
+health-app/.env.*.local
+
+# Backend - exclude caches and local env
+backend/__pycache__
+backend/**/__pycache__
+backend/.env
+backend/.env.local
+backend/*.pyc
+backend/.pytest_cache
+backend/venv
+backend/.venv
+
+# IDE / OS
+.vscode
+.idea
+*.log
+.DS_Store
+
+# Optional: uncomment to skip docs (smaller archive)
+# backend/docs
+# *.md
+# !README.md
