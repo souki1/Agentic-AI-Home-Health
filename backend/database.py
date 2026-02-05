@@ -39,19 +39,62 @@ except ImportError:
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+import logging
 
 from config import settings
 
-# For Cloud SQL, use Unix socket if INSTANCE_CONNECTION_NAME is set (from env)
-database_url = settings.database_url
+logger = logging.getLogger(__name__)
+
+# Determine database connection URL from environment variables
+# Priority: INSTANCE_CONNECTION_NAME (Cloud SQL Unix socket) > DATABASE_URL (direct connection)
+database_url: str
+
 if settings.instance_connection_name:
-    # Cloud SQL connection via Unix socket (all values from settings/env)
+    # Cloud SQL connection via Unix socket (recommended for Cloud Run)
+    # All values MUST come from environment variables - no defaults
     db_user = settings.db_user
     db_pass = settings.db_pass
     db_name = settings.db_name
     instance_connection_name = settings.instance_connection_name
-    # Format: postgresql+psycopg2://user:pass@/dbname?host=/cloudsql/instance
-    database_url = f"postgresql+psycopg2://{db_user}:{db_pass}@/{db_name}?host=/cloudsql/{instance_connection_name}"
+    db_port = settings.db_port
+    sslmode = settings.db_sslmode
+    
+    # Validate required fields for Cloud SQL (all from env vars)
+    if not db_user:
+        raise ValueError(
+            f"DB_USER is required when using INSTANCE_CONNECTION_NAME. "
+            f"Set DB_USER in your environment variables (.env.local or Cloud Run env vars)."
+        )
+    if not db_name:
+        raise ValueError(
+            f"DB_NAME is required when using INSTANCE_CONNECTION_NAME. "
+            f"Set DB_NAME in your environment variables (.env.local or Cloud Run env vars)."
+        )
+    if not sslmode:
+        raise ValueError(
+            f"DB_SSLMODE is required when using INSTANCE_CONNECTION_NAME. "
+            f"Set DB_SSLMODE in your environment variables (e.g., DB_SSLMODE=require)."
+        )
+    
+    # Format: postgresql+psycopg2://user:pass@/dbname?host=/cloudsql/instance&sslmode=require
+    # Note: Password can be empty if using Cloud SQL IAM authentication
+    if db_pass:
+        database_url = f"postgresql+psycopg2://{db_user}:{db_pass}@/{db_name}?host=/cloudsql/{instance_connection_name}&sslmode={sslmode}"
+    else:
+        # No password (using IAM auth or password from Secret Manager)
+        database_url = f"postgresql+psycopg2://{db_user}@/{db_name}?host=/cloudsql/{instance_connection_name}&sslmode={sslmode}"
+    
+    logger.info(f"Using Cloud SQL Unix socket: {instance_connection_name}")
+elif settings.database_url:
+    # Using direct DATABASE_URL connection
+    database_url = settings.database_url
+    logger.debug(f"Using DATABASE_URL connection (direct connection)")
+else:
+    # Neither is set - this should be caught by config validation, but handle gracefully
+    raise ValueError(
+        "Database connection not configured. "
+        "Set either DATABASE_URL or INSTANCE_CONNECTION_NAME environment variable."
+    )
 
 # Connection pool settings for Cloud Run
 engine = create_engine(
