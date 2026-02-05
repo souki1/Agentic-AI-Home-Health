@@ -30,6 +30,11 @@ export async function request<T>(
   const base = config.apiBaseUrl;
   if (!base) throw new ApiError("VITE_API_URL is not set", 0);
   const url = path.startsWith("http") ? path : `${base}${path}`;
+  
+  // Debug: log API calls in development
+  if (import.meta.env.DEV) {
+    console.log(`[API] ${options.method || "GET"} ${url}`);
+  }
   let token: string | undefined;
   if (auth) {
     try {
@@ -50,12 +55,37 @@ export async function request<T>(
       ...options.headers,
     },
   });
+  
+  // Check Content-Type before parsing
+  const contentType = res.headers.get("content-type") || "";
+  const isJson = contentType.includes("application/json");
+  
   if (!res.ok) {
     const message = await parseErrorResponse(res);
     throw new ApiError(message, res.status);
   }
+  
   if (res.status === 204 || res.headers.get("content-length") === "0") {
     return undefined as T;
   }
+  
+  // Only parse JSON if Content-Type indicates JSON
+  if (!isJson) {
+    const text = await res.text();
+    // If we got HTML, likely hitting wrong URL (frontend instead of backend)
+    if (contentType.includes("text/html") || text.trim().startsWith("<!")) {
+      throw new ApiError(
+        `Got HTML instead of JSON. Check API URL: ${url}. ` +
+        `If using '/api', ensure backend URL is set at build time (VITE_API_URL). ` +
+        `Current API base: ${base}`,
+        res.status
+      );
+    }
+    throw new ApiError(
+      `Expected JSON but got ${contentType || "unknown"}. Response: ${text.substring(0, 200)}`,
+      res.status
+    );
+  }
+  
   return res.json() as Promise<T>;
 }
