@@ -46,10 +46,15 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 # Determine database connection URL from environment variables
-# Priority: INSTANCE_CONNECTION_NAME (Cloud SQL Unix socket) > DATABASE_URL (direct connection)
+# Priority: DATABASE_URL (TCP, works from Cloud Run or local) > INSTANCE_CONNECTION_NAME (Unix socket)
+# Use DATABASE_URL when set (e.g. postgresql://user:pass@PUBLIC_IP:5432/health_analytics?sslmode=require)
 database_url: str
 
-if settings.instance_connection_name:
+if settings.database_url:
+    # Direct connection (TCP) - use when socket is unavailable or for local dev
+    database_url = settings.database_url
+    logger.info("Using DATABASE_URL (direct TCP connection)")
+elif settings.instance_connection_name:
     # Cloud SQL connection via Unix socket (recommended for Cloud Run)
     # All values MUST come from environment variables - no defaults
     db_user = settings.db_user
@@ -85,10 +90,6 @@ if settings.instance_connection_name:
         database_url = f"postgresql+psycopg2://{db_user}@/{db_name}?{query}"
     
     logger.info(f"Using Cloud SQL Unix socket: {instance_connection_name}")
-elif settings.database_url:
-    # Using direct DATABASE_URL connection
-    database_url = settings.database_url
-    logger.debug(f"Using DATABASE_URL connection (direct connection)")
 else:
     # Neither is set - this should be caught by config validation, but handle gracefully
     raise ValueError(

@@ -4,6 +4,56 @@ This guide connects your backend to **Cloud SQL for PostgreSQL** so the Cloud Ru
 
 **Your instance:** `tech-83b89:us-central1:healtappdb` (project: tech-83b89, region: us-central1).
 
+---
+
+## Fix: "database unreachable" / socket not found → Use DATABASE_URL (TCP)
+
+If the backend returns **"connection to server on socket ... No such file or directory"**, use a **TCP connection** instead of the Unix socket. The backend prefers `DATABASE_URL` when set.
+
+### 1. Get your instance public IP
+
+- GCP Console → **SQL** → open instance **healtappdb** → copy **Public IP address**.
+- If there is no public IP: **Edit** the instance → **Connections** → enable **Public IP** → save.
+
+### 2. Allow Cloud Run to connect (authorized network)
+
+- On the same instance → **Connections** → **Networking**.
+- **Add network**: Name e.g. `cloud-run`, Network `0.0.0.0/0` (or restrict to your Cloud Run region later). Save.
+
+### 3. Create or update the DATABASE_URL secret
+
+Use this format (replace `YOUR_PUBLIC_IP` and `YOUR_DB_PASSWORD`):
+
+```
+postgresql://health_user:YOUR_DB_PASSWORD@YOUR_PUBLIC_IP:5432/health_analytics?sslmode=require
+```
+
+**Create the secret (first time):**
+
+```bash
+gcloud config set project tech-83b89
+echo -n "postgresql://health_user:YOUR_DB_PASSWORD@YOUR_PUBLIC_IP:5432/health_analytics?sslmode=require" | gcloud secrets create DATABASE_URL_SECRET --data-file=-
+```
+
+**Update the secret (if it already exists):**
+
+```bash
+echo -n "postgresql://health_user:YOUR_DB_PASSWORD@YOUR_PUBLIC_IP:5432/health_analytics?sslmode=require" | gcloud secrets versions add DATABASE_URL_SECRET --data-file=-
+```
+
+### 4. Redeploy the backend
+
+So Cloud Run uses the new code (which prefers `DATABASE_URL`) and the secret:
+
+```bash
+# From repo root
+gcloud builds submit --config=backend/cloudbuild.yaml .
+```
+
+Or push to `main` if you use GitHub Actions for the backend. After deploy, `/health` should return `{"status":"ok","database":"connected"}`.
+
+---
+
 ### Quick commands for this instance
 
 ```bash
@@ -211,15 +261,15 @@ For **public IP**, enable it on the instance and (recommended) restrict authoriz
 
 ## Summary: What the backend expects
 
+The backend **prefers `DATABASE_URL` (TCP)** when set; otherwise it uses the Cloud SQL Unix socket.
+
 | Connection type | Env / Secret | Required |
 |-----------------|--------------|----------|
-| **Cloud SQL (Unix socket)** | `INSTANCE_CONNECTION_NAME` (env) | Yes |
-| | `DB_USER`, `DB_NAME` (env) | Yes |
-| | `DB_PASS` (secret) | Yes |
-| | Cloud Run: `--add-cloudsql-instances=...` | Yes |
-| **Connection string** | `DATABASE_URL` (secret) | Yes if no socket |
-
-Your backend code (`database.py`) uses the socket when `INSTANCE_CONNECTION_NAME` is set; otherwise it uses `DATABASE_URL` from settings (env/secret).
+| **DATABASE_URL (TCP)** | `DATABASE_URL` (secret) | Preferred when set; use for "socket not found" fix |
+| **Cloud SQL (Unix socket)** | `INSTANCE_CONNECTION_NAME` (env) | Used only when DATABASE_URL is not set |
+| | `DB_USER`, `DB_NAME` (env) | Yes for socket |
+| | `DB_PASS` (secret) | Yes for socket |
+| | Cloud Run: `--add-cloudsql-instances=...` | Yes for socket |
 
 ---
 

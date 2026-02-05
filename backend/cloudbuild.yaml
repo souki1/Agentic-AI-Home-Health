@@ -74,11 +74,12 @@ steps:
       - --add-cloudsql-instances
       - ${_CLOUDSQL_INSTANCE}
     waitFor: [push]
-    # Cloud SQL: create DB_PASS_SECRET with DB user password. Create DB and user in instance healtappdb, then run schema (see backend/docs/GCP-DATABASE-CONNECT.md).
-    # Note: Create secrets in Secret Manager:
-    #   echo -n "postgresql://..." | gcloud secrets create DATABASE_URL_SECRET --data-file=-
-    #   echo -n "jwt-secret" | gcloud secrets create SECRET_KEY_SECRET --data-file=-
-    #   echo -n "db-user-password" | gcloud secrets create DB_PASS_SECRET --data-file=-
+    # Cloud SQL: Backend prefers DATABASE_URL (TCP) when set, else Unix socket.
+    # Option A - DATABASE_URL secret (recommended if socket fails): full URL, e.g.:
+    #   postgresql://health_user:PASSWORD@INSTANCE_PUBLIC_IP:5432/health_analytics?sslmode=require
+    #   (Enable public IP on instance and add 0.0.0.0/0 to authorized networks for Cloud Run.)
+    # Option B - Socket: ensure instance name matches exactly (e.g. healtappdb vs healthappdb in GCP Console).
+    # Create secrets: DATABASE_URL_SECRET, SECRET_KEY_SECRET, DB_PASS_SECRET (see backend/docs/GCP-DATABASE-CONNECT.md).
 
 images:
   - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/${_SERVICE_NAME}:${_IMAGE_TAG}
