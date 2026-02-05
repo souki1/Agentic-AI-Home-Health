@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useCheckIns } from "../hooks";
 import { addDays, toISODate, formatDate } from "../utils";
@@ -16,13 +17,23 @@ type Range = "7" | "30" | "custom";
 
 export function PatientHistoryPage() {
   const { user } = useAuth();
+  const location = useLocation();
   const [range, setRange] = useState<Range>("30");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [selected, setSelected] = useState<CheckInWithScores | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { data, loading, error } = useCheckIns(user?.id ?? "p1");
+  const { data, loading, error, refetch } = useCheckIns(user?.id ?? "p1");
   const allCheckIns = data ?? [];
+  const prevPathRef = useRef(location.pathname);
+
+  // Refetch when user navigates to this page so new check-ins appear (e.g. after submitting)
+  useEffect(() => {
+    const isNavigatingToHistory =
+      location.pathname === "/patient/history" && prevPathRef.current !== "/patient/history";
+    prevPathRef.current = location.pathname;
+    if (isNavigatingToHistory) refetch();
+  }, [location.pathname, refetch]);
 
   const filtered = useMemo(() => {
     const today = toISODate(new Date());
@@ -34,7 +45,12 @@ export function PatientHistoryPage() {
       start = customStart || addDays(today, -30);
       end = customEnd || today;
     }
-    return allCheckIns.filter((c) => c.date >= start && c.date <= end);
+    // API returns full ISO datetime; compare date part only (YYYY-MM-DD)
+    const toDateOnly = (d: string) => (d && d.length >= 10 ? d.slice(0, 10) : d);
+    return allCheckIns.filter((c) => {
+      const day = toDateOnly(c.date);
+      return day >= start && day <= end;
+    });
   }, [allCheckIns, range, customStart, customEnd]);
 
   const openDrawer = (row: CheckInWithScores) => {
@@ -60,6 +76,11 @@ export function PatientHistoryPage() {
               onCustomEndChange={setCustomEnd}
             />
           </div>
+          {filtered.length === 0 ? (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center text-slate-600">
+              No check-ins in this date range. Submit a daily check-in from the Check-in page to see your history here.
+            </div>
+          ) : (
           <DataTable<CheckInWithScores>
             keyField="id"
             data={filtered}
@@ -103,6 +124,7 @@ export function PatientHistoryPage() {
               },
             ]}
           />
+          )}
         </div>
       </QueryState>
 

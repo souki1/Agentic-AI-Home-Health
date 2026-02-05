@@ -21,7 +21,7 @@ export function LoginPage() {
     try {
       const address = email || 'user@example.com';
       try {
-        const response = await apiLogin(address, password);
+        const response = await apiLogin(address, password, role);
         login(response);
         navigate(response.user.role === 'patient' ? '/patient/checkin' : '/admin/dashboard');
         return;
@@ -35,7 +35,7 @@ export function LoginPage() {
         // 401 = user may not exist: auto-register then retry login
         try {
           await apiRegister({ email: address, password, role });
-          const response = await apiLogin(address, password);
+          const response = await apiLogin(address, password, role);
           login(response);
           navigate(response.user.role === 'patient' ? '/patient/checkin' : '/admin/dashboard');
         } catch (registerErr) {

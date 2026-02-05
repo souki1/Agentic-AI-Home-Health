@@ -6,6 +6,9 @@ import { addDays, toISODate, formatDate } from "../utils";
 import { AppLayout } from "../components/layout";
 import { KpiCard, LineChartCard, DataTable, StatusBadge, QueryState } from "../components";
 
+// API returns full ISO datetime; normalize to YYYY-MM-DD for comparisons and grouping
+const toDateOnly = (d: string) => (d && d.length >= 10 ? d.slice(0, 10) : d);
+
 export function AdminDashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -16,14 +19,20 @@ export function AdminDashboardPage() {
 
   const last7 = useMemo(() => {
     const start = addDays(today, -7);
-    return checkIns.filter((c) => c.date >= start && c.date <= today);
+    return checkIns.filter((c) => {
+      const day = toDateOnly(c.date);
+      return day >= start && day <= today;
+    });
   }, [checkIns, today]);
   const last30 = useMemo(() => {
     const start = addDays(today, -30);
-    return checkIns.filter((c) => c.date >= start && c.date <= today);
+    return checkIns.filter((c) => {
+      const day = toDateOnly(c.date);
+      return day >= start && day <= today;
+    });
   }, [checkIns, today]);
 
-  const checkInsToday = checkIns.filter((c) => c.date === today).length;
+  const checkInsToday = checkIns.filter((c) => toDateOnly(c.date) === today).length;
   const expectedPerDay = patients.length;
   const missingRate7d =
     expectedPerDay * 7 > 0
@@ -38,7 +47,10 @@ export function AdminDashboardPage() {
   const byDay = useMemo(() => {
     const map = new Map<string, number>();
     for (let i = 29; i >= 0; i--) map.set(addDays(today, -i), 0);
-    last30.forEach((c) => map.set(c.date, (map.get(c.date) ?? 0) + 1));
+    last30.forEach((c) => {
+      const day = toDateOnly(c.date);
+      map.set(day, (map.get(day) ?? 0) + 1);
+    });
     return Array.from(map.entries()).map(([date, value]) => ({
       date: date.slice(5),
       value,
@@ -49,7 +61,8 @@ export function AdminDashboardPage() {
     const map = new Map<string, { sum: number; count: number }>();
     for (let i = 29; i >= 0; i--) map.set(addDays(today, -i), { sum: 0, count: 0 });
     last30.forEach((c) => {
-      const v = map.get(c.date)!;
+      const day = toDateOnly(c.date);
+      const v = map.get(day)!;
       v.sum += c.risk_score;
       v.count += 1;
     });

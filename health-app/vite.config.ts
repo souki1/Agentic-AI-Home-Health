@@ -11,10 +11,10 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       proxy: {
+        // Forward /api/* to backend (backend routes are under /api)
         '/api': {
-          target: env.VITE_API_URL || 'http://localhost:8000',
+          target: env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:8000',
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, ''),
         },
       },
     },
