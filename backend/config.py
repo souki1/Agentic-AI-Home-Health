@@ -108,15 +108,11 @@ def validate_settings():
         errors.append("Either DATABASE_URL or INSTANCE_CONNECTION_NAME must be set in environment variables")
     
     if settings.instance_connection_name:
-        # Cloud SQL requires these fields from env vars
+        # Cloud SQL via Unix socket only needs user + db name. Port/sslmode are optional.
         if not settings.db_user:
             errors.append("DB_USER must be set in environment variables when using INSTANCE_CONNECTION_NAME")
         if not settings.db_name:
             errors.append("DB_NAME must be set in environment variables when using INSTANCE_CONNECTION_NAME")
-        if settings.db_port is None:
-            errors.append("DB_PORT must be set in environment variables (e.g., DB_PORT=5432)")
-        if not settings.db_sslmode:
-            errors.append("DB_SSLMODE must be set in environment variables (e.g., DB_SSLMODE=require)")
     
     # Auth validation - must come from env vars
     if not settings.secret_key:

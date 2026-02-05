@@ -70,19 +70,19 @@ if settings.instance_connection_name:
             f"DB_NAME is required when using INSTANCE_CONNECTION_NAME. "
             f"Set DB_NAME in your environment variables (.env.local or Cloud Run env vars)."
         )
-    if not sslmode:
-        raise ValueError(
-            f"DB_SSLMODE is required when using INSTANCE_CONNECTION_NAME. "
-            f"Set DB_SSLMODE in your environment variables (e.g., DB_SSLMODE=require)."
-        )
-    
     # Format: postgresql+psycopg2://user:pass@/dbname?host=/cloudsql/instance&sslmode=require
     # Note: Password can be empty if using Cloud SQL IAM authentication
+    query_parts = [f"host=/cloudsql/{instance_connection_name}"]
+    if sslmode:
+        query_parts.append(f"sslmode={sslmode}")
+    if db_port is not None:
+        query_parts.append(f"port={db_port}")
+    query = "&".join(query_parts)
     if db_pass:
-        database_url = f"postgresql+psycopg2://{db_user}:{db_pass}@/{db_name}?host=/cloudsql/{instance_connection_name}&sslmode={sslmode}"
+        database_url = f"postgresql+psycopg2://{db_user}:{db_pass}@/{db_name}?{query}"
     else:
         # No password (using IAM auth or password from Secret Manager)
-        database_url = f"postgresql+psycopg2://{db_user}@/{db_name}?host=/cloudsql/{instance_connection_name}&sslmode={sslmode}"
+        database_url = f"postgresql+psycopg2://{db_user}@/{db_name}?{query}"
     
     logger.info(f"Using Cloud SQL Unix socket: {instance_connection_name}")
 elif settings.database_url:

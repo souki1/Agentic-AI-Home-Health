@@ -11,11 +11,8 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 # Build args for API URL (set to backend URL for Cloud Run)
-# If not provided, will use .env.production file
+# If not provided, Vite will use .env.production
 ARG VITE_API_URL
-# Set env var for build - use build arg if provided, otherwise Vite will read from .env.production
-# Important: Only set ENV if ARG is provided (non-empty), otherwise let Vite read from .env.production
-ENV VITE_API_URL=${VITE_API_URL}
 
 # Copy all files (including .env.production)
 COPY . .
@@ -29,9 +26,12 @@ RUN if [ -z "$VITE_API_URL" ]; then \
     fi
 
 # Build with production mode
-# Vite automatically uses .env.production when building in production mode
-# If VITE_API_URL env var is set (from build arg), it takes precedence
-RUN npm run build
+# Only inject VITE_API_URL if the build arg is non-empty
+RUN if [ -n "$VITE_API_URL" ]; then \
+      VITE_API_URL="$VITE_API_URL" npm run build; \
+    else \
+      npm run build; \
+    fi
 
 # ---- Production (Node + serve) ----
 FROM node:22-alpine AS production
