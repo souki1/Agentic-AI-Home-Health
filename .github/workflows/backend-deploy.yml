@@ -90,6 +90,8 @@ jobs:
             --set-env-vars GOOGLE_CLOUD_PROJECT="${{ vars.GOOGLE_CLOUD_PROJECT }}" \
             --set-env-vars VECTOR_SEARCH_INDEX_ENDPOINT_ID="${{ vars.VECTOR_SEARCH_INDEX_ENDPOINT_ID }}" \
             --set-env-vars GOOGLE_CLOUD_LOCATION="${{ vars.GOOGLE_CLOUD_LOCATION || 'us-central1' }}" \
+            --set-env-vars ALGORITHM=HS256 \
+            --set-env-vars ACCESS_TOKEN_EXPIRE_MINUTES=10080 \
             --add-cloudsql-instances ${{ env.CLOUDSQL_INSTANCE }}
         # Note: Secrets must be created in Secret Manager:
         #   DATABASE_URL_SECRET, SECRET_KEY_SECRET, DB_PASS_SECRET
