@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def resolve_secret_paths(self):
         self.database_url = _resolve_database_url(self.database_url)
+        # Fallback: Cloud Run / GitHub may set GCP_PROJECT_ID instead of GOOGLE_CLOUD_PROJECT
+        if not (self.google_cloud_project or "").strip():
+            fallback = (os.environ.get("GCP_PROJECT_ID") or "").strip()
+            if fallback:
+                self.google_cloud_project = fallback
         return self
 
     @property
