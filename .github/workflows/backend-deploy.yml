@@ -19,7 +19,7 @@ on:
 
 env:
   SERVICE_NAME: backend
-  GCP_REGION: northamerica-northeast1
+  GCP_REGION: europe-west1
   # Production settings (can be overridden via repository variables)
   CORS_ORIGINS: "https://agentic-ai-home-health-79306395653.europe-west1.run.app,http://localhost:5173"
   CLOUDSQL_INSTANCE: "tech-83b89:us-central1:health-analytics-db"

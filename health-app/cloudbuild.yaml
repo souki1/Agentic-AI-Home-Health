@@ -19,8 +19,8 @@
 substitutions:
   _REGION: europe-west1
   _SERVICE_NAME: agentic-ai-home-health
-  _VITE_API_URL: https://backend-79306395653.northamerica-northeast1.run.app
-  _BACKEND_URL: https://backend-79306395653.northamerica-northeast1.run.app
+  _VITE_API_URL: https://backend-79306395653.europe-west1.run.app/api
+  _BACKEND_URL: https://backend-79306395653.europe-west1.run.app/api
   _IMAGE_TAG: latest
 
 options:
