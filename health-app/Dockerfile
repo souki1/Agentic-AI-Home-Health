@@ -11,7 +11,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 # Build arg: backend API URL (REQUIRED for production). Default matches this project's backend.
-ARG VITE_API_URL=https://backend-79306395653.europe-west1.run.app/api
+ARG VITE_API_URL=https://backend-79306395653.europe-west1.run.app
 ENV VITE_API_URL=${VITE_API_URL}
 
 # Copy all files (including .env.production as fallback)
