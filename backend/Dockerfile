@@ -10,10 +10,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# FastAPI on port 8000
+# Cloud Run uses PORT=8080; Docker Compose uses 8000
 ENV HOST=0.0.0.0
-ENV PORT=8000
-EXPOSE 8000
+ENV PORT=8080
+EXPOSE 8080
 
-# Run uvicorn (main:app from main.py)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run uvicorn; Cloud Run sets PORT=8080 (read in Python for reliability)
+CMD ["python", "-c", "import os; import uvicorn; uvicorn.run('main:app', host='0.0.0.0', port=int(os.environ.get('PORT', '8080')))"]

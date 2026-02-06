@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     port: int = 8000
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
-    model_config = {"env_file": (".env", ".env.local"), "extra": "ignore"}
+    model_config = {"env_file": (".env", ".env.local", ".env.production"), "extra": "ignore"}
 
     @property
     def cors_list(self) -> list[str]:
