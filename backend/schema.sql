@@ -1,6 +1,6 @@
--- PostgreSQL schema for Health Analytics (local use only).
+-- PostgreSQL schema for Health Analytics.
 -- Tables are also created by the app on startup via SQLAlchemy create_all.
-select * from users
+-- Run this manually in Cloud SQL if you want the schema before the app starts.
 CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(36) PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
