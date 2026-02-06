@@ -1,5 +1,5 @@
 """Request/response models for the API."""
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel
 
@@ -101,3 +101,18 @@ class CheckInWithScoresOut(BaseModel):
     symptom_score: float = 0
     risk_score: float = 0
     status: str = "Normal"
+
+
+class ChatMessage(BaseModel):
+    role: str  # "user" or "assistant"
+    content: str
+
+
+class ChatRequest(BaseModel):
+    message: str
+    conversation_history: Optional[List[ChatMessage]] = None
+
+
+class ChatResponse(BaseModel):
+    response: str
+    provider: str  # "ollama" or "vertex"

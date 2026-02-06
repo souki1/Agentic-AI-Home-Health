@@ -8,7 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from auth import create_access_token, get_current_user, pwd_ctx
 from database import CheckIn, Patient, User, DbSession
-from schemas import AuthResponse, AuthUser, CheckInCreate, CheckInWithScoresOut, LoginBody, PatientOut, Token, UserCreate
+from rag import get_rag_chat
+from schemas import AuthResponse, AuthUser, ChatRequest, ChatResponse, CheckInCreate, CheckInWithScoresOut, LoginBody, PatientOut, Token, UserCreate
 from scores import check_in_to_response
 
 router = APIRouter()
@@ -111,6 +112,21 @@ def create_check_in(body: CheckInCreate, db: DbSession, current: AuthUser = Depe
 @router.post("/check-ins/sync-analytics", status_code=status.HTTP_204_NO_CONTENT)
 def sync_analytics(current: AuthUser = Depends(get_current_user)):
     return Response(status_code=204)
+
+
+# ---- Chat / RAG ----
+@router.post("/chat", response_model=ChatResponse)
+def chat(body: ChatRequest, db: DbSession, current: AuthUser = Depends(get_current_user)):
+    """RAG chat endpoint. Uses Ollama locally or Vertex AI in cloud."""
+    try:
+        rag = get_rag_chat()
+        history = None
+        if body.conversation_history:
+            history = [{"role": msg.role, "content": msg.content} for msg in body.conversation_history]
+        response_text = rag.chat(body.message, current.id, db, history)
+        return ChatResponse(response=response_text, provider=rag.provider)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Chat error: {str(e)}")
 
 
 # ---- Seed ----

@@ -4,11 +4,15 @@ import type {
   CheckInWithScores,
   AuthResponse,
   AuthState,
+  ChatRequest,
+  ChatResponse,
+  ChatMessage,
 } from "../types";
 import { ApiError, request } from "./client";
 
 const PATIENTS = "/patients";
 const CHECK_INS = "/check-ins";
+const CHAT = "/chat";
 
 export async function register(user: {
   email: string;
@@ -102,5 +106,19 @@ export async function createCheckIn(
 export async function syncAnalytics(): Promise<void> {
   await request(`${CHECK_INS}/sync-analytics`, {
     method: "POST",
+  });
+}
+
+export async function sendChatMessage(
+  message: string,
+  conversationHistory?: ChatMessage[]
+): Promise<ChatResponse> {
+  const payload: ChatRequest = {
+    message,
+    conversation_history: conversationHistory,
+  };
+  return request<ChatResponse>(CHAT, {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
 }

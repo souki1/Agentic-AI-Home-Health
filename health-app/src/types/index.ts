@@ -75,3 +75,18 @@ export interface AuthState {
   user: AuthUser;
   token: AuthToken;
 }
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatRequest {
+  message: string;
+  conversation_history?: ChatMessage[];
+}
+
+export interface ChatResponse {
+  response: string;
+  provider: 'ollama' | 'vertex';
+}

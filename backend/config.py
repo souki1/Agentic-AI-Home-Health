@@ -24,6 +24,15 @@ class Settings(BaseSettings):
     host: str = Field(default="0.0.0.0", env="HOST")
     port: int = Field(default=8000, env="PORT")
     cors_origins: str = Field(default="http://localhost:5173,http://127.0.0.1:5173", env="CORS_ORIGINS")
+    
+    # LLM / RAG settings
+    llm_provider: str = Field(default="ollama", env="LLM_PROVIDER", description="'ollama' for local, 'vertex' for cloud")
+    ollama_base_url: str = Field(default="http://localhost:11434", env="OLLAMA_BASE_URL")
+    ollama_model: str = Field(default="llama3.2", env="OLLAMA_MODEL")
+    google_cloud_project: str = Field(default="", env="GOOGLE_CLOUD_PROJECT")
+    google_cloud_location: str = Field(default="us-central1", env="GOOGLE_CLOUD_LOCATION")
+    vertex_model: str = Field(default="gemini-1.5-flash", env="VERTEX_MODEL")
+    vector_search_index_endpoint_id: str = Field(default="", env="VECTOR_SEARCH_INDEX_ENDPOINT_ID")
 
     model_config = {"env_file": (".env", ".env.local", ".env.production"), "extra": "ignore"}
 

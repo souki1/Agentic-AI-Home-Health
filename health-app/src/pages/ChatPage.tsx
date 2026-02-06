@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { AppLayout } from '../components/layout';
+import { sendChatMessage } from '../services/api';
+import type { ChatMessage } from '../types';
 
 type MessageRole = 'user' | 'assistant';
 
@@ -17,16 +19,19 @@ export function ChatPage() {
     {
       id: '1',
       role: 'assistant',
-      content: "Hi! I'm your health assistant. Ask me about your check-ins, symptoms, or care plan. RAG integration coming soon.",
+      content: "Hi! I'm your health assistant. Ask me about your check-ins, symptoms, or care plan.",
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = input.trim();
-    if (!text) return;
+    if (!text || loading) return;
+    
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -35,18 +40,40 @@ export function ChatPage() {
     };
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
-    // Mock reply (replace with RAG later)
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: "This is a placeholder reply. Connect your RAG pipeline to get answers from health records and guidelines.",
-          timestamp: new Date(),
-        },
-      ]);
-    }, 600);
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Convert messages to ChatMessage format for API
+      const conversationHistory: ChatMessage[] = messages
+        .slice(1) // Skip initial welcome message
+        .map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        }));
+
+      const response = await sendChatMessage(text, conversationHistory);
+      
+      const assistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: response.response,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : 'Failed to get response';
+      setError(errorMsg);
+      const errorAssistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `Sorry, I encountered an error: ${errorMsg}`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorAssistantMsg]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -58,7 +85,10 @@ export function ChatPage() {
       <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-3xl flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-4 py-3">
           <h2 className="text-sm font-semibold text-slate-800">Health Assistant</h2>
-          <p className="text-xs text-slate-500">RAG-powered answers coming soon</p>
+          <p className="text-xs text-slate-500">RAG-powered answers from your health data</p>
+          {error && (
+            <p className="text-xs text-red-600 mt-1">Error: {error}</p>
+          )}
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((msg) => (
@@ -92,9 +122,10 @@ export function ChatPage() {
             />
             <button
               type="submit"
-              className="rounded-xl bg-primary-600 px-4 py-3 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+              disabled={loading || !input.trim()}
+              className="rounded-xl bg-primary-600 px-4 py-3 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Send
+              {loading ? 'Sending...' : 'Send'}
             </button>
           </div>
         </form>
