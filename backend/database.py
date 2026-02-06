@@ -1,4 +1,4 @@
-"""DB engine, session, and models. SQLite by default."""
+"""DB engine, session, and models. PostgreSQL only (e.g. Cloud SQL or local)."""
 from collections.abc import Generator
 from datetime import datetime
 from typing import Annotated
@@ -10,8 +10,7 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from config import settings
 
 url = settings.database_url
-kw = {"connect_args": {"check_same_thread": False}} if url.startswith("sqlite") else {"pool_pre_ping": True}
-engine = create_engine(url, **kw)
+engine = create_engine(url, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
