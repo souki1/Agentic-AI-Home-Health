@@ -10,10 +10,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Cloud Run uses PORT=8080; Docker Compose uses 8000
+# Cloud Run injects PORT=8080; app must listen on 0.0.0.0:PORT
 ENV HOST=0.0.0.0
 ENV PORT=8080
 EXPOSE 8080
 
-# Run uvicorn; Cloud Run sets PORT=8080 (read in Python for reliability)
-CMD ["python", "-c", "import os; import uvicorn; uvicorn.run('main:app', host='0.0.0.0', port=int(os.environ.get('PORT', '8080')))"]
+# Listen on PORT so Cloud Run health check passes. DB is lazy-loaded so server can start even if DATABASE_URL is not yet available.
+CMD ["python", "-c", "import os; port = int(os.environ.get('PORT', '8080')); print('Listening on', port); import uvicorn; uvicorn.run('main:app', host='0.0.0.0', port=port)"]

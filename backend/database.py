@@ -9,13 +9,37 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from config import settings
 
-url = settings.database_url
-engine = create_engine(url, pool_pre_ping=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+_engine = None
+_session_factory = None
+
+
+def _get_engine():
+    global _engine
+    if _engine is None:
+        url = (settings.database_url or "").strip()
+        if not url:
+            raise RuntimeError("DATABASE_URL is not set. Set the env var or Cloud Run secret DATABASE_URL_SECRET.")
+        _engine = create_engine(url, pool_pre_ping=True)
+    return _engine
+
+
+def _get_session_factory():
+    global _session_factory
+    if _session_factory is None:
+        _session_factory = sessionmaker(autocommit=False, autoflush=False, bind=_get_engine())
+    return _session_factory
+
+
+def get_engine():
+    """Return the SQLAlchemy engine (lazy-init). Use for create_all etc."""
+    return _get_engine()
+
+
 Base = declarative_base()
 
 
 def get_db() -> Generator[Session, None, None]:
+    SessionLocal = _get_session_factory()
     db = SessionLocal()
     try:
         yield db

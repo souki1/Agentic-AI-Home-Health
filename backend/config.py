@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    database_url: str = Field(..., description="PostgreSQL URL (e.g. Cloud SQL or local)")
+    database_url: str = Field(default="", description="PostgreSQL URL (required for DB; empty allows server to start for Cloud Run health checks)")
     secret_key: str = Field(default="change-me-in-production", env="SECRET_KEY")
     algorithm: str = Field(default="HS256", env="ALGORITHM")
     access_token_expire_minutes: int = Field(default=10080, env="ACCESS_TOKEN_EXPIRE_MINUTES")

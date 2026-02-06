@@ -5,13 +5,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from database import Base, engine
+from database import Base, get_engine
 from routes import router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    if (settings.database_url or "").strip():
+        Base.metadata.create_all(bind=get_engine())
     yield
 
 
