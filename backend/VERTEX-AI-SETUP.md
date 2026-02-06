@@ -19,10 +19,10 @@ Set it so the deployed service gets it:
 
 - **Manual deploy:** When you run `gcloud run deploy`, pass the env var:
   ```bash
-  gcloud run deploy backend ... --set-env-vars GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID,LLM_PROVIDER=vertex,VERTEX_MODEL=gemini-1.5-flash,GOOGLE_CLOUD_LOCATION=us-central1
+  gcloud run deploy backend ... --set-env-vars GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID,LLM_PROVIDER=vertex,VERTEX_MODEL=gemini-2.0-flash-001,GOOGLE_CLOUD_LOCATION=us-central1
   ```
 
-- **Cloud Console:** Cloud Run → your **backend** service → **Edit & deploy new revision** → **Variables and secrets** → add **GOOGLE_CLOUD_PROJECT** = your project ID, **LLM_PROVIDER** = `vertex`, **VERTEX_MODEL** = `gemini-1.5-flash`, **GOOGLE_CLOUD_LOCATION** = `us-central1`.
+- **Cloud Console:** Cloud Run → your **backend** service → **Edit & deploy new revision** → **Variables and secrets** → add **GOOGLE_CLOUD_PROJECT** = your project ID, **LLM_PROVIDER** = `vertex`, **VERTEX_MODEL** = `gemini-2.0-flash-001`, **GOOGLE_CLOUD_LOCATION** = `us-central1`.
 
 ### Option B: Local (prod-like)
 
@@ -33,7 +33,7 @@ If you run the backend locally with Vertex (e.g. using `.env.production`):
   GOOGLE_CLOUD_PROJECT=your-gcp-project-id
   GOOGLE_CLOUD_LOCATION=us-central1
   LLM_PROVIDER=vertex
-  VERTEX_MODEL=gemini-1.5-flash
+  VERTEX_MODEL=gemini-2.0-flash-001
   ```
 - Replace `your-gcp-project-id` with your actual project ID (e.g. `tech-83b89`).
 

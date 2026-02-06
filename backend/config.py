@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     ollama_model: str = Field(default="llama3.2", env="OLLAMA_MODEL")
     google_cloud_project: str = Field(default="", env="GOOGLE_CLOUD_PROJECT")
     google_cloud_location: str = Field(default="us-central1", env="GOOGLE_CLOUD_LOCATION")
-    vertex_model: str = Field(default="gemini-1.5-flash", env="VERTEX_MODEL")
+    vertex_model: str = Field(default="gemini-2.0-flash-001", env="VERTEX_MODEL")
     vector_search_index_endpoint_id: str = Field(default="", env="VECTOR_SEARCH_INDEX_ENDPOINT_ID")
 
     model_config = {"env_file": (".env", ".env.local", ".env.production"), "extra": "ignore"}
