@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { login as apiLogin, register as apiRegister } from '../services/api';
-import { ApiError } from '../services/client';
+import { login as apiLogin } from '../services/api';
 import type { Role } from '../types';
 
 export function LoginPage() {
@@ -20,31 +19,11 @@ export function LoginPage() {
     setLoading(true);
     try {
       const address = email || 'user@example.com';
-      try {
-        const response = await apiLogin(address, password, role);
-        login(response);
-        navigate(response.user.role === 'patient' ? '/patient/checkin' : '/admin/dashboard');
-        return;
-      } catch (err) {
-        const is401 = err instanceof ApiError && err.status === 401;
-        const message = err instanceof Error ? err.message : 'Login failed';
-        if (!is401 && !message.toLowerCase().includes('invalid credentials')) {
-          setError(message);
-          return;
-        }
-        // 401 = user may not exist: auto-register then retry login
-        try {
-          await apiRegister({ email: address, password, role });
-          const response = await apiLogin(address, password, role);
-          login(response);
-          navigate(response.user.role === 'patient' ? '/patient/checkin' : '/admin/dashboard');
-        } catch (registerErr) {
-          setError(registerErr instanceof Error ? registerErr.message : 'Registration or login failed');
-        }
-        return;
-      }
+      const response = await apiLogin(address, password, role);
+      login(response);
+      navigate(response.user.role === 'patient' ? '/patient/checkin' : '/admin/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : 'Sign in failed');
     } finally {
       setLoading(false);
     }
@@ -112,7 +91,7 @@ export function LoginPage() {
           </button>
         </form>
         <p className="mt-6 text-center text-xs text-slate-400">
-          Sign in with any email/password. Backend required (VITE_API_URL).
+          Sign in with your email. New users are registered automatically.
         </p>
       </div>
     </div>

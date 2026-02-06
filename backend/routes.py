@@ -36,12 +36,13 @@ def register(body: UserCreate, db: DbSession):
 
 @router.post("/auth/login", response_model=AuthResponse)
 def login(body: LoginBody, db: DbSession):
+    """If user exists: verify password and return token. If not: register then return token (one-step sign-in)."""
     user = db.query(User).filter(User.email == body.email).first()
     if user:
         if not pwd_ctx.verify(body.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Invalid credentials")
     else:
-        # Auto-register: create user (and patient if patient) so login always works
+        # User does not exist: register (user + patient if role=patient) then treat as logged in
         uid = str(uuid.uuid4())
         role = "admin" if body.role == "admin" else "patient"
         db.add(User(id=uid, email=body.email, hashed_password=pwd_ctx.hash(body.password), role=role))
