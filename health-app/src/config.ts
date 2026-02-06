@@ -4,7 +4,12 @@ const env = import.meta.env;
 // In dev: reads from .env.local
 // In production build: reads from .env.production or build-time VITE_API_URL
 const viteApiUrl = env.VITE_API_URL as string | undefined;
-const raw = viteApiUrl?.trim()?.replace(/\/$/, "") ?? "";
+let raw = viteApiUrl?.trim()?.replace(/\/$/, "") ?? "";
+
+// Backend serves routes under /api (e.g. /api/auth/login). Ensure base URL ends with /api in production.
+if (raw && import.meta.env.PROD && !raw.endsWith("/api")) {
+  raw = raw + "/api";
+}
 
 // Determine API base URL
 // Priority: VITE_API_URL env var > /api proxy (dev only)
