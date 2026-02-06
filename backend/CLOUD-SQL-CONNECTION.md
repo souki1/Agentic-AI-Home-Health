@@ -104,6 +104,20 @@ gcloud run deploy backend \
 - Call login: `POST https://backend-79306395653.europe-west1.run.app/api/auth/login` with a new email.
 - Then run SQL in Cloud SQL (Part 1) and check that the new user exists in the `users` table.
 
+### Still getting "Database not configured"?
+
+1. **Same project**  
+   In the Google Cloud Console, check the **project selector** at the top. Your Cloud Run URL contains a project (e.g. `79306395653`). Create **DATABASE_URL_SECRET** in **that same project** (Secret Manager → ensure the selected project is the one where the backend runs).
+
+2. **Confirm the revision has the secret**  
+   Cloud Run → **backend** service → **Revisions** → click the latest revision → **Variables and secrets**. You should see **DATABASE_URL** referencing **DATABASE_URL_SECRET**. If it’s missing, the running revision wasn’t deployed with the secret.
+
+3. **Add the secret via Console (no redeploy from GitHub)**  
+   Cloud Run → **backend** → **Edit and deploy new revision** → **Container(s)** → **Variables and secrets** → **Reference a secret** → Name: **DATABASE_URL**, Secret: **DATABASE_URL_SECRET**, Version: **latest** → **Deploy**. That creates a new revision with the secret.
+
+4. **Service account access**  
+   The Cloud Run service account needs **Secret Manager Secret Accessor** on **DATABASE_URL_SECRET**. In Secret Manager → **DATABASE_URL_SECRET** → **Permissions** → add the service account (e.g. `PROJECT_NUMBER-compute@developer.gserviceaccount.com`) with that role.
+
 ---
 
 ## Reference: connection strings
