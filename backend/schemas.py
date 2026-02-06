@@ -116,3 +116,15 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     provider: str  # "ollama" or "vertex"
+
+
+class ChatMessageOut(BaseModel):
+    id: str
+    role: str
+    content: str
+    created_at: str
+
+
+class ConversationHistoryOut(BaseModel):
+    conversation_id: str
+    messages: List[ChatMessageOut]

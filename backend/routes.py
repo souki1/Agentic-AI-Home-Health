@@ -7,9 +7,10 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from auth import create_access_token, get_current_user, pwd_ctx
-from database import CheckIn, Patient, User, DbSession
+from database import CheckIn, ChatMessage as ChatMessageModel, Conversation, Patient, User, DbSession
+from embeddings import get_embedding
 from rag import get_rag_chat
-from schemas import AuthResponse, AuthUser, ChatRequest, ChatResponse, CheckInCreate, CheckInWithScoresOut, LoginBody, PatientOut, Token, UserCreate
+from schemas import AuthResponse, AuthUser, ChatRequest, ChatResponse, ChatMessageOut, CheckInCreate, CheckInWithScoresOut, ConversationHistoryOut, LoginBody, PatientOut, Token, UserCreate
 from scores import check_in_to_response
 
 router = APIRouter()
@@ -116,18 +117,73 @@ def sync_analytics(current: AuthUser = Depends(get_current_user)):
 
 
 # ---- Chat / RAG ----
+def _get_or_create_conversation(user_id: str, db: DbSession) -> Conversation:
+    """One conversation per user (single thread)."""
+    conv = db.query(Conversation).filter(Conversation.user_id == user_id).order_by(Conversation.updated_at.desc()).first()
+    if conv:
+        return conv
+    conv = Conversation(id=str(uuid.uuid4()), user_id=user_id)
+    db.add(conv)
+    db.flush()
+    return conv
+
+
 @router.post("/chat", response_model=ChatResponse)
 def chat(body: ChatRequest, db: DbSession, current: AuthUser = Depends(get_current_user)):
-    """RAG chat endpoint. Uses Ollama locally or Vertex AI in cloud."""
+    """RAG chat endpoint. Chats stored in SQL; embeddings in pgvector for semantic search."""
     try:
+        conv = _get_or_create_conversation(current.id, db)
+        user_msg_id = str(uuid.uuid4())
+        user_embedding = get_embedding(body.message)
+        db.add(
+            ChatMessageModel(
+                id=user_msg_id,
+                conversation_id=conv.id,
+                role="user",
+                content=body.message,
+                embedding=user_embedding,
+            )
+        )
+        db.flush()
+
         rag = get_rag_chat()
         history = None
         if body.conversation_history:
             history = [{"role": msg.role, "content": msg.content} for msg in body.conversation_history]
         response_text = rag.chat(body.message, current.id, db, history)
+
+        assistant_msg_id = str(uuid.uuid4())
+        assistant_embedding = get_embedding(response_text)
+        db.add(
+            ChatMessageModel(
+                id=assistant_msg_id,
+                conversation_id=conv.id,
+                role="assistant",
+                content=response_text,
+                embedding=assistant_embedding,
+            )
+        )
+        conv.updated_at = datetime.utcnow()
+
         return ChatResponse(response=response_text, provider=rag.provider)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Chat error: {str(e)}")
+
+
+@router.get("/chat/history", response_model=ConversationHistoryOut)
+def chat_history(db: DbSession, current: AuthUser = Depends(get_current_user)):
+    """Return the current user's chat messages (SQL-stored conversation)."""
+    conv = db.query(Conversation).filter(Conversation.user_id == current.id).order_by(Conversation.updated_at.desc()).first()
+    if not conv:
+        return ConversationHistoryOut(conversation_id="", messages=[])
+    rows = db.query(ChatMessageModel).filter(ChatMessageModel.conversation_id == conv.id).order_by(ChatMessageModel.created_at.asc()).all()
+    return ConversationHistoryOut(
+        conversation_id=conv.id,
+        messages=[
+            ChatMessageOut(id=m.id, role=m.role, content=m.content, created_at=(m.created_at.isoformat() if m.created_at else ""))
+            for m in rows
+        ],
+    )
 
 
 # ---- Seed ----

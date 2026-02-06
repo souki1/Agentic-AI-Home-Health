@@ -4,7 +4,9 @@ from typing import List, Optional
 import httpx
 
 from config import settings
-from database import CheckIn, Patient, DbSession
+from database import CheckIn, Conversation, Patient, DbSession
+from database import ChatMessage as ChatMessageModel
+from embeddings import get_embedding
 
 
 class RAGChat:
@@ -39,36 +41,50 @@ class RAGChat:
             raise ImportError("google-cloud-aiplatform not installed. Run: pip install google-cloud-aiplatform")
     
     def _retrieve_context(self, query: str, user_id: str, db: DbSession) -> str:
-        """Retrieve relevant context from patient check-ins and notes."""
-        # Get patient's check-ins
-        patient = db.query(Patient).filter(Patient.id == user_id).first()
-        if not patient:
-            return ""
-        
-        check_ins = db.query(CheckIn).filter(CheckIn.patient_id == user_id).order_by(CheckIn.date.desc()).limit(10).all()
-        
+        """Retrieve relevant context from patient check-ins, notes, and past chat (vector search)."""
         context_parts = []
+
+        # Patient info and check-ins
+        patient = db.query(Patient).filter(Patient.id == user_id).first()
         if patient:
             context_parts.append(f"Patient: {patient.name}, Age: {patient.age}, Condition: {patient.condition}")
-        
-        for ci in check_ins:
-            symptoms = []
-            if ci.fatigue > 0:
-                symptoms.append(f"fatigue ({ci.fatigue:.1f})")
-            if ci.breathlessness > 0:
-                symptoms.append(f"breathlessness ({ci.breathlessness:.1f})")
-            if ci.cough > 0:
-                symptoms.append(f"cough ({ci.cough:.1f})")
-            if ci.pain > 0:
-                symptoms.append(f"pain ({ci.pain:.1f})")
-            if ci.notes:
-                symptoms.append(f"notes: {ci.notes}")
-            
-            if symptoms:
-                date_str = ci.date.strftime("%Y-%m-%d") if ci.date else "unknown"
-                context_parts.append(f"Check-in {date_str}: {', '.join(symptoms)}")
-        
-        return "\n".join(context_parts) if context_parts else "No recent check-in data available."
+            check_ins = db.query(CheckIn).filter(CheckIn.patient_id == user_id).order_by(CheckIn.date.desc()).limit(10).all()
+            for ci in check_ins:
+                symptoms = []
+                if ci.fatigue > 0:
+                    symptoms.append(f"fatigue ({ci.fatigue:.1f})")
+                if ci.breathlessness > 0:
+                    symptoms.append(f"breathlessness ({ci.breathlessness:.1f})")
+                if ci.cough > 0:
+                    symptoms.append(f"cough ({ci.cough:.1f})")
+                if ci.pain > 0:
+                    symptoms.append(f"pain ({ci.pain:.1f})")
+                if ci.notes:
+                    symptoms.append(f"notes: {ci.notes}")
+                if symptoms:
+                    date_str = ci.date.strftime("%Y-%m-%d") if ci.date else "unknown"
+                    context_parts.append(f"Check-in {date_str}: {', '.join(symptoms)}")
+
+        # Vector search over past chat messages (when embeddings available)
+        query_embedding = get_embedding(query)
+        if query_embedding:
+            limit = getattr(settings, "chat_vector_search_limit", 5) or 5
+            try:
+                nearest = (
+                    db.query(ChatMessageModel)
+                    .join(Conversation, Conversation.id == ChatMessageModel.conversation_id)
+                    .filter(Conversation.user_id == user_id)
+                    .filter(ChatMessageModel.embedding.isnot(None))
+                    .order_by(ChatMessageModel.embedding.cosine_distance(query_embedding))
+                    .limit(limit)
+                    .all()
+                )
+            except Exception:
+                nearest = []
+            for msg in nearest:
+                context_parts.append(f"Past chat ({msg.role}): {msg.content[:500]}{'...' if len(msg.content or '') > 500 else ''}")
+
+        return "\n".join(context_parts) if context_parts else "No recent check-in or chat data available."
     
     def chat(self, query: str, user_id: str, db: DbSession, conversation_history: Optional[List[dict]] = None) -> str:
         """Generate RAG response using retrieved context."""

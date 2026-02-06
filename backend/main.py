@@ -14,7 +14,15 @@ from routes import router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if (settings.database_url or "").strip():
-        Base.metadata.create_all(bind=get_engine())
+        engine = get_engine()
+        with engine.connect() as conn:
+            try:
+                conn.execute(__import__("sqlalchemy").text("CREATE EXTENSION IF NOT EXISTS vector"))
+                conn.commit()
+            except Exception:
+                # e.g. local postgres image without pgvector: use pgvector/pgvector:pg16 in docker-compose
+                conn.rollback()
+        Base.metadata.create_all(bind=engine)
     yield
 
 

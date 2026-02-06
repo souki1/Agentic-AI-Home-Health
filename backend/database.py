@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from config import settings
 
+from pgvector.sqlalchemy import Vector
+
 _engine = None
 _session_factory = None
 
@@ -97,3 +99,22 @@ class CheckIn(Base):
     mobility = Column(String(20), default="Normal")
     devices = Column(Text, nullable=True)
     notes = Column(Text, nullable=True)
+
+
+# Chat storage: SQL + vector (pgvector). Embedding optional when using Ollama.
+class Conversation(Base):
+    __tablename__ = "conversations"
+    id = Column(String(36), primary_key=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+    id = Column(String(36), primary_key=True)
+    conversation_id = Column(String(36), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True)
+    role = Column(String(20), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    embedding = Column(Vector(768), nullable=True)

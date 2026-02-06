@@ -32,7 +32,9 @@ class Settings(BaseSettings):
     google_cloud_project: str = Field(default="", env="GOOGLE_CLOUD_PROJECT")
     google_cloud_location: str = Field(default="us-central1", env="GOOGLE_CLOUD_LOCATION")
     vertex_model: str = Field(default="gemini-2.0-flash-001", env="VERTEX_MODEL")
+    vertex_embedding_model: str = Field(default="text-embedding-005", env="VERTEX_EMBEDDING_MODEL")
     vector_search_index_endpoint_id: str = Field(default="", env="VECTOR_SEARCH_INDEX_ENDPOINT_ID")
+    chat_vector_search_limit: int = Field(default=5, env="CHAT_VECTOR_SEARCH_LIMIT")
 
     model_config = {"env_file": (".env", ".env.local", ".env.production"), "extra": "ignore"}
 

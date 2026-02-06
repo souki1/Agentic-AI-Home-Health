@@ -1,6 +1,25 @@
 # Vertex AI setup for RAG chat (Cloud Run)
 
-When `LLM_PROVIDER=vertex`, the backend uses **Vertex AI** (Gemini) for chat. You must set **GOOGLE_CLOUD_PROJECT** and enable the Vertex AI API.
+When `LLM_PROVIDER=vertex`, the backend uses **Vertex AI** (Gemini) for chat and for **text embeddings** (chat stored in SQL + pgvector). You must set **GOOGLE_CLOUD_PROJECT** and enable the Vertex AI API.
+
+---
+
+## 0. Cloud SQL: enable pgvector (for chat + vector search)
+
+Chats are stored in PostgreSQL; embeddings use the **pgvector** extension in the same database.
+
+1. In **Google Cloud Console** go to **SQL** → your **Cloud SQL** instance.
+2. Open **Cloud Shell** or connect with any client (e.g. psql) as a user that can create extensions (e.g. `postgres` or a user with `cloudsqlsuperuser`).
+3. Connect to the **database** your app uses (the one in `DATABASE_URL`).
+4. Run once:
+   ```sql
+   CREATE EXTENSION IF NOT EXISTS vector;
+   ```
+5. After that, the app can create and use `conversations` and `chat_messages` (with `embedding vector(768)`).
+
+If the app runs as a DB user that **cannot** create extensions, you must run the above as `postgres` (or another superuser) once. The app will then create the tables on startup.
+
+---
 
 ---
 
@@ -53,11 +72,11 @@ If you run the backend locally with Vertex (e.g. using `.env.production`):
 
 ## 3. Permissions (Cloud Run)
 
-The Cloud Run service account must be allowed to use Vertex AI:
+The Cloud Run service account must be allowed to use Vertex AI (chat **and** embeddings):
 
 1. **IAM & Admin → IAM**.
 2. Find the Cloud Run service account (e.g. `PROJECT_NUMBER-compute@developer.gserviceaccount.com`).
-3. Add role **Vertex AI User** (`roles/aiplatform.user`) for that project (or a custom role with `aiplatform.endpoints.predict`).
+3. Add role **Vertex AI User** (`roles/aiplatform.user`) for that project. This covers both Gemini (chat) and the Text Embedding API (chat vector search).
 
 Or in one command (replace `PROJECT_ID` and `SERVICE_ACCOUNT_EMAIL`):
 
